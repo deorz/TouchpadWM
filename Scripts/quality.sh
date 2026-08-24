@@ -8,8 +8,10 @@ swift_command=${QUALITY_SWIFT:-swift}
 developer_dir=${DEVELOPER_DIR:-$(xcode-select -p)}
 llvm_cov=${QUALITY_LLVM_COV:-"$developer_dir/Toolchains/XcodeDefault.xctoolchain/usr/bin/llvm-cov"}
 minimum_line_coverage=${QUALITY_MIN_LINE_COVERAGE:-80}
-coverage_exclusions='/\.build/|/Tests/|/Sources/TouchpadWMSpike/MultitouchBridge\.swift$|/Sources/TouchpadWMSpike/main\.swift$'
+coverage_exclusions='/\.build/|/Tests/|/Sources/TouchpadWM/TouchpadWMApp\.swift$|/Sources/TouchpadWMSpike/MultitouchBridge\.swift$|/Sources/TouchpadWMSpike/main\.swift$'
 
+"$swift_command" package plugin lint-source-code --target TouchpadWM
+"$swift_command" package plugin lint-source-code --target TouchpadWMTests
 "$swift_command" package plugin lint-source-code --target TouchpadWMSpike
 "$swift_command" package plugin lint-source-code --target TouchpadWMSpikeTests
 "$swift_command" build
