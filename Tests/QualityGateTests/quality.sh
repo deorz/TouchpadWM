@@ -35,6 +35,8 @@ export QUALITY_LOG="$tmpdir/commands.log"
 export QUALITY_COVERAGE_JSON='{"data":[{"totals":{"lines":{"count":10,"covered":8}}}]}'
 run_gate
 
+grep -Fx 'package plugin lint-source-code --target TouchpadWM' "$QUALITY_LOG"
+grep -Fx 'package plugin lint-source-code --target TouchpadWMTests' "$QUALITY_LOG"
 grep -Fx 'package plugin lint-source-code --target TouchpadWMSpike' "$QUALITY_LOG"
 grep -Fx 'package plugin lint-source-code --target TouchpadWMSpikeTests' "$QUALITY_LOG"
 grep -Fx 'build' "$QUALITY_LOG"

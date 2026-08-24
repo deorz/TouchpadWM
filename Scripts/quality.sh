@@ -10,6 +10,8 @@ llvm_cov=${QUALITY_LLVM_COV:-"$developer_dir/Toolchains/XcodeDefault.xctoolchain
 minimum_line_coverage=${QUALITY_MIN_LINE_COVERAGE:-80}
 coverage_exclusions='/\.build/|/Tests/|/Sources/TouchpadWMSpike/MultitouchBridge\.swift$|/Sources/TouchpadWMSpike/main\.swift$'
 
+"$swift_command" package plugin lint-source-code --target TouchpadWM
+"$swift_command" package plugin lint-source-code --target TouchpadWMTests
 "$swift_command" package plugin lint-source-code --target TouchpadWMSpike
 "$swift_command" package plugin lint-source-code --target TouchpadWMSpikeTests
 "$swift_command" build
