@@ -34,6 +34,28 @@ final class WindowManagementControllerTests: XCTestCase {
     XCTAssertTrue(service.appliedFrames.isEmpty)
   }
 
+  @MainActor
+  func testAvailableAppStateDelegatesLayoutCommandToTheController() {
+    let controller = RecordingWindowManager(result: .applied)
+    let state = AppState(permissionChecker: PermissionSource(isTrusted: true), windowManagement: controller)
+
+    state.performLayoutCommand(.rightHalf)
+
+    XCTAssertEqual(controller.receivedZones, [.rightHalf])
+    XCTAssertEqual(state.windowManagementStatus, "Applied right half layout.")
+  }
+
+  @MainActor
+  func testUnavailableAppStateDoesNotDelegateLayoutCommand() {
+    let controller = RecordingWindowManager(result: .applied)
+    let state = AppState(permissionChecker: PermissionSource(isTrusted: false), windowManagement: controller)
+
+    state.performLayoutCommand(.masterStack)
+
+    XCTAssertTrue(controller.receivedZones.isEmpty)
+    XCTAssertEqual(state.windowManagementStatus, "Accessibility access is required.")
+  }
+
   private var focusedNormalWindow: CataloguedWindow {
     window(id: 1, role: .normal)
   }
@@ -54,6 +76,36 @@ final class WindowManagementControllerTests: XCTestCase {
       role: role,
       isMinimized: false,
       visibleFrame: CGRect(x: 0, y: 0, width: 1000, height: 800))
+  }
+}
+
+private final class PermissionSource: AccessibilityPermissionChecking {
+  let trusted: Bool
+
+  init(isTrusted: Bool) {
+    trusted = isTrusted
+  }
+
+  func isTrusted() -> Bool {
+    trusted
+  }
+
+  func openSettings() -> Bool {
+    true
+  }
+}
+
+private final class RecordingWindowManager: WindowManaging {
+  let result: LayoutOperationResult
+  private(set) var receivedZones: [LayoutZone] = []
+
+  init(result: LayoutOperationResult) {
+    self.result = result
+  }
+
+  func apply(_ zone: LayoutZone) -> LayoutOperationResult {
+    receivedZones.append(zone)
+    return result
   }
 }
 

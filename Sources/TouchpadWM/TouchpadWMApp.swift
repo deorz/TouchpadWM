@@ -43,12 +43,16 @@ private struct StatusMenuView: View {
       state.refreshAccessibilityPermission()
     }
     Divider()
-    Button("Left half") {}
-      .disabled(state.accessibilityPermission == .unavailable)
-    Button("Right half") {}
-      .disabled(state.accessibilityPermission == .unavailable)
-    Button("Master stack") {}
-      .disabled(state.accessibilityPermission == .unavailable)
+    layoutButton("Left half", command: .leftHalf)
+    layoutButton("Right half", command: .rightHalf)
+    layoutButton("Left 75%", command: .leftThreeQuarters)
+    layoutButton("Right 25%", command: .rightQuarter)
+    layoutButton("Top-right 25%", command: .topRightQuarter)
+    layoutButton("Bottom-right 25%", command: .bottomRightQuarter)
+    layoutButton("Master stack", command: .masterStack)
+    if !state.windowManagementStatus.isEmpty {
+      Text(state.windowManagementStatus)
+    }
     Divider()
     SettingsLink()
     Button("Quit Touchpad WM") {
@@ -56,10 +60,17 @@ private struct StatusMenuView: View {
     }
     .onAppear {
       state.refreshAccessibilityPermission()
-      keyboardMonitor.start {
-        state.accessibilityPermission
-      }
+      keyboardMonitor.start(
+        permission: { state.accessibilityPermission },
+        perform: state.performLayoutCommand)
     }
+  }
+
+  private func layoutButton(_ title: String, command: LayoutCommand) -> some View {
+    Button(title) {
+      state.performLayoutCommand(command)
+    }
+    .disabled(state.accessibilityPermission == .unavailable)
   }
 }
 
@@ -92,7 +103,10 @@ final class KeyboardEventMonitor {
   private var monitor: Any?
   private var router = KeyboardCommandRouter()
 
-  func start(permission: @escaping () -> AccessibilityPermissionState) {
+  func start(
+    permission: @escaping () -> AccessibilityPermissionState,
+    perform: @escaping (LayoutCommand) -> Void
+  ) {
     guard monitor == nil else {
       return
     }
@@ -102,9 +116,7 @@ final class KeyboardEventMonitor {
       guard let self, let input = Self.input(from: event) else {
         return event
       }
-      let didDispatch = router.consume(input, permission: permission()) { _ in
-        // Layout execution is provided by the later layout-engine milestone.
-      }
+      let didDispatch = router.consume(input, permission: permission(), perform: perform)
       return didDispatch ? nil : event
     }
   }
