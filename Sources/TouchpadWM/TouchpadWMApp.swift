@@ -39,6 +39,9 @@ private struct StatusMenuView: View {
         state.openAccessibilitySettings()
       }
     }
+    Button("Refresh Accessibility Status") {
+      state.refreshAccessibilityPermission()
+    }
     Divider()
     Button("Left half") {}
       .disabled(state.accessibilityPermission == .unavailable)
@@ -70,6 +73,9 @@ private struct SettingsView: View {
         Text("Window-management commands require Accessibility access.")
         Button("Open Accessibility Settings") {
           state.openAccessibilitySettings()
+        }
+        Button("Refresh Accessibility Status") {
+          state.refreshAccessibilityPermission()
         }
       }
       Section("App Rules") {
