@@ -31,7 +31,9 @@ private struct StatusMenuView: View {
   let keyboardMonitor: KeyboardEventMonitor
 
   var body: some View {
-    Text(state.accessibilityPermission == .available ? "Accessibility access granted" : "Accessibility access required")
+    Text(
+      state.accessibilityPermission == .available
+        ? "Accessibility access granted" : "Accessibility access required")
     if state.accessibilityPermission == .unavailable {
       Button("Open Accessibility Settings") {
         state.openAccessibilitySettings()
@@ -89,7 +91,8 @@ final class KeyboardEventMonitor {
       return
     }
 
-    monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] event in
+    monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) {
+      [weak self] event in
       guard let self, let input = Self.input(from: event) else {
         return event
       }

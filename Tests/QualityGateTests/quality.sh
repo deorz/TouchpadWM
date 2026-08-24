@@ -41,7 +41,7 @@ grep -Fx 'package plugin lint-source-code --target TouchpadWMSpike' "$QUALITY_LO
 grep -Fx 'package plugin lint-source-code --target TouchpadWMSpikeTests' "$QUALITY_LOG"
 grep -Fx 'build' "$QUALITY_LOG"
 grep -Fx 'test --enable-code-coverage' "$QUALITY_LOG"
-grep -F 'export ' "$QUALITY_LOG" | grep -F -- '-instr-profile ' | grep -F -- '--ignore-filename-regex ' | grep -F -- '/Tests/' | grep -F -- 'MultitouchBridge\.swift' | grep -F -- 'main\.swift'
+grep -F 'export ' "$QUALITY_LOG" | grep -F -- '-instr-profile ' | grep -F -- '--ignore-filename-regex ' | grep -F -- '/Tests/' | grep -F -- 'MultitouchBridge\.swift' | grep -F -- 'main\.swift' | grep -F -- 'TouchpadWMApp\.swift'
 
 echo 'quality gate accepts exactly 80% line coverage'
 

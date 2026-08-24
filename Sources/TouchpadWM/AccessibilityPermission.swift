@@ -18,7 +18,10 @@ struct AccessibilityPermissionService: AccessibilityPermissionChecking {
   }
 
   func openSettings() -> Bool {
-    guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
+    guard
+      let url = URL(
+        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    else {
       return false
     }
     return NSWorkspace.shared.open(url)

@@ -18,12 +18,12 @@ struct KeyboardCommandInterpreter {
 
   mutating func consume(_ input: KeyboardInput) -> LayoutCommand? {
     switch input {
-    case let .flagsChanged(keyCode):
+    case .flagsChanged(let keyCode):
       if keyCode == 61 {
         rightOptionIsPressed.toggle()
       }
       return nil
-    case let .keyDown(keyCode, shiftIsPressed):
+    case .keyDown(let keyCode, let shiftIsPressed):
       guard rightOptionIsPressed else {
         return nil
       }
