@@ -4,3 +4,4 @@
 .dev-dashboard/
 docs/
 .build/
+.worktrees/
