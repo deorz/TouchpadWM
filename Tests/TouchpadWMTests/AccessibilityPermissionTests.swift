@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 
 @testable import TouchpadWM
@@ -12,6 +13,16 @@ final class AccessibilityPermissionTests: XCTestCase {
 
     source.trusted = true
     state.refreshAccessibilityPermission()
+
+    XCTAssertEqual(state.accessibilityPermission, .available)
+  }
+
+  func testAutomaticallyRefreshesPermissionStatus() {
+    let source = PermissionSource(isTrusted: false)
+    let state = AppState(permissionChecker: source)
+
+    source.trusted = true
+    RunLoop.main.run(until: Date().addingTimeInterval(2.2))
 
     XCTAssertEqual(state.accessibilityPermission, .available)
   }

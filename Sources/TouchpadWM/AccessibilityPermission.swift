@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Foundation
 import Observation
 
 enum AccessibilityPermissionState: Equatable {
@@ -33,10 +34,17 @@ struct AccessibilityPermissionService: AccessibilityPermissionChecking {
 final class AppState {
   private(set) var accessibilityPermission: AccessibilityPermissionState
   private let permissionChecker: any AccessibilityPermissionChecking
+  private var permissionRefreshTimer: Timer?
 
   init(permissionChecker: any AccessibilityPermissionChecking = AccessibilityPermissionService()) {
     self.permissionChecker = permissionChecker
     accessibilityPermission = permissionChecker.isTrusted() ? .available : .unavailable
+    permissionRefreshTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) {
+      [weak self] _ in
+      Task { @MainActor in
+        self?.refreshAccessibilityPermission()
+      }
+    }
   }
 
   func refreshAccessibilityPermission() {
