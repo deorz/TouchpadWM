@@ -1,5 +1,6 @@
 import Dispatch
 import Foundation
+import TouchpadWMSpike
 
 let bridge = MultitouchBridge()
 guard bridge.start() else {
