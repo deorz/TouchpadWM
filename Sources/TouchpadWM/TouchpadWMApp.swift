@@ -11,6 +11,14 @@ struct TouchpadWMApp: App {
 
   init() {
     NSApplication.shared.setActivationPolicy(.accessory)
+    // A one-time warm-up activation. Without ever activating once, an .accessory-policy app's
+    // NSPanel windows (the switcher overlay) can silently fail to actually order to the front
+    // on their first show, even though orderFrontRegardless() reports success -- a known AppKit
+    // quirk for background/accessory apps that have never been made the active app. This does
+    // not conflict with the overlay panel's own .nonactivatingPanel behavior: that governs
+    // whether opening the switcher steals focus on each gesture, not this unrelated one-time
+    // startup step, and activating a windowless accessory app has no visible effect.
+    NSApp.activate(ignoringOtherApps: true)
     let windowManagement = WindowManagementController(service: AccessibilityWindowService())
     let overlay = SwitcherOverlayPanelController()
     let switcherController = SwitcherController(windowManaging: windowManagement)
