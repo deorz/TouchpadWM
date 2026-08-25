@@ -19,38 +19,46 @@ final class AccessibilityPermissionTests: XCTestCase {
 
   func testAutomaticallyRefreshesPermissionStatus() {
     let source = PermissionSource(isTrusted: false)
-    let state = AppState(permissionChecker: source)
+    let state = AppState(permissionChecker: source, refreshInterval: 0.03)
 
     source.trusted = true
-    RunLoop.main.run(until: Date().addingTimeInterval(2.2))
+    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
     XCTAssertEqual(state.accessibilityPermission, .available)
   }
 
-  func testOpeningSettingsDoesNotChangeUnavailablePermission() {
-    let source = PermissionSource(isTrusted: false, opensSettings: false)
-    let state = AppState(permissionChecker: source)
+  func testRequestingInputMonitoringRefreshesItsPermissionStatus() {
+    let source = PermissionSource(isTrusted: false, inputMonitoringAccess: false)
+    let state = AppState(permissionChecker: source, inputMonitoringChecker: source)
 
-    state.openAccessibilitySettings()
+    XCTAssertEqual(state.inputMonitoringPermission, .unavailable)
+    source.inputMonitoringAccess = true
+    state.requestInputMonitoringAccess()
 
-    XCTAssertEqual(state.accessibilityPermission, .unavailable)
-  }
-}
-
-private final class PermissionSource: AccessibilityPermissionChecking {
-  var trusted: Bool
-  let opensSettings: Bool
-
-  init(isTrusted: Bool, opensSettings: Bool = true) {
-    trusted = isTrusted
-    self.opensSettings = opensSettings
+    XCTAssertEqual(source.inputMonitoringRequestCount, 1)
+    XCTAssertEqual(state.inputMonitoringPermission, .available)
   }
 
-  func isTrusted() -> Bool {
-    trusted
+  func testDoesNotPollWhenAlreadyTrustedAtInit() {
+    let source = PermissionSource(isTrusted: true)
+    _ = AppState(permissionChecker: source, refreshInterval: 0.03)
+
+    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+
+    XCTAssertEqual(source.isTrustedCallCount, 1)
   }
 
-  func openSettings() -> Bool {
-    opensSettings
+  func testStopsPollingOnceAccessBecomesAvailable() {
+    let source = PermissionSource(isTrusted: false)
+    let state = AppState(permissionChecker: source, refreshInterval: 0.03)
+
+    source.trusted = true
+    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+    XCTAssertEqual(state.accessibilityPermission, .available)
+
+    let callCountAfterGranted = source.isTrustedCallCount
+    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+
+    XCTAssertEqual(source.isTrustedCallCount, callCountAfterGranted)
   }
 }
