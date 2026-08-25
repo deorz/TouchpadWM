@@ -1,14 +1,16 @@
-enum ThreeFingerGestureEvent: Equatable {
+public enum ThreeFingerGestureEvent: Equatable {
   case began
   case changed(totalVerticalMovement: Float)
   case ended
 }
 
-struct ThreeFingerGestureRecognizer {
+public struct ThreeFingerGestureRecognizer {
   private var trackedIDs: Set<Int32>?
   private var originY: Float?
 
-  mutating func consume(_ frame: TouchFrame) -> [ThreeFingerGestureEvent] {
+  public init() {}
+
+  public mutating func consume(_ frame: TouchFrame) -> [ThreeFingerGestureEvent] {
     let currentIDs = Set(frame.contacts.map(\.id))
 
     guard let trackedIDs, let originY else {

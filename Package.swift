@@ -13,8 +13,8 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-format.git", exact: "603.0.0")
     ],
     targets: [
-        .executableTarget(name: "TouchpadWM"),
-        .testTarget(name: "TouchpadWMTests", dependencies: ["TouchpadWM"]),
+        .executableTarget(name: "TouchpadWM", dependencies: ["TouchpadWMSpike"]),
+        .testTarget(name: "TouchpadWMTests", dependencies: ["TouchpadWM", "TouchpadWMSpike"]),
         .executableTarget(
             name: "TouchpadWMSpike",
             dependencies: [.product(name: "OpenMultitouchSupport", package: "OpenMultitouchSupport")]
