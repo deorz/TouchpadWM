@@ -17,7 +17,13 @@ protocol WindowManaging: AnyObject {
   func apply(_ zone: LayoutZone) -> LayoutOperationResult
 }
 
-final class WindowManagementController: WindowManaging {
+protocol SwitcherWindowManaging: AnyObject {
+  func refreshedWindowsForSwitcher() -> [CataloguedWindow]
+  func markWindowFocused(_ id: WindowID)
+  func activate(_ id: WindowID) -> Bool
+}
+
+final class WindowManagementController: WindowManaging, SwitcherWindowManaging {
   private let service: any AccessibilityWindowServicing
   private var catalogue = WindowCatalogue()
 
@@ -35,5 +41,21 @@ final class WindowManagementController: WindowManaging {
 
     let frame = LayoutGeometry.frame(for: zone, in: focusedWindow.visibleFrame)
     return service.apply(frame, to: focusedID) ? .applied : .inaccessibleWindow
+  }
+
+  func refreshedWindowsForSwitcher() -> [CataloguedWindow] {
+    catalogue.replaceWindows(service.refreshWindows())
+    if let focusedID = service.focusedWindowID() {
+      catalogue.markFocused(focusedID)
+    }
+    return catalogue.windowsForSwitcher
+  }
+
+  func markWindowFocused(_ id: WindowID) {
+    catalogue.markFocused(id)
+  }
+
+  func activate(_ id: WindowID) -> Bool {
+    service.activate(id)
   }
 }
