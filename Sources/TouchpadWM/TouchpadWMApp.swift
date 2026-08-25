@@ -24,9 +24,21 @@ struct TouchpadWMApp: App {
     let switcherController = SwitcherController(windowManaging: windowManagement)
     _state = State(initialValue: AppState(windowManagement: windowManagement))
     _overlay = State(initialValue: overlay)
-    _switcherCoordinator = State(
-      initialValue: SwitcherGestureCoordinator(
-        switcherController: switcherController, overlay: overlay))
+    let switcherCoordinator = SwitcherGestureCoordinator(
+      switcherController: switcherController, overlay: overlay)
+    _switcherCoordinator = State(initialValue: switcherCoordinator)
+
+    // Started unconditionally here rather than from the scenePhase onChange below: for an
+    // .accessory-policy app, scenePhase reaching .active depends on a real activation transition
+    // happening at some point after launch (e.g. opening Settings). Relying on that onChange to
+    // start the trackpad bridge meant the switcher gesture silently did nothing
+    // until the user happened to trigger one -- the gesture and its keyboard modifiers need no
+    // app activation to function, so they start as soon as the app object exists.
+    keyboardMonitor.onEscape = { switcherCoordinator.cancelOpenSession() }
+    keyboardMonitor.rightOptionDidChange = { isPressed in
+      switcherCoordinator.isRightOptionPressed = isPressed
+    }
+    switcherCoordinator.start()
   }
 
   var body: some Scene {
@@ -41,11 +53,6 @@ struct TouchpadWMApp: App {
         return
       }
       state.refreshAccessibilityPermission()
-      keyboardMonitor.onEscape = { switcherCoordinator.cancelOpenSession() }
-      keyboardMonitor.rightOptionDidChange = { isPressed in
-        switcherCoordinator.isRightOptionPressed = isPressed
-      }
-      switcherCoordinator.start()
     }
     .onChange(of: state.inputMonitoringPermission) { _, permission in
       if permission == .available {
