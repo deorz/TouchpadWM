@@ -16,15 +16,12 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private var elements: [WindowID: AXUIElement] = [:]
 
   func refreshWindows() -> [CataloguedWindow] {
-    // CGWindowListCopyWindowInfo does not enumerate windows on Spaces other than the active one,
-    // regardless of .optionOnScreenOnly -- that limitation is unconditional, not gated by that
-    // flag. So this metadata is used only to enrich a window's frame when it happens to be
-    // available (the current Space); it is never a requirement for a window to be catalogued.
-    // Enumeration itself walks each running application's AX windows directly, which does
-    // include windows on other Spaces, so cross-Space windows stay reachable for the switcher
-    // (the switcher and layout share this one catalogue source -- see
-    // WindowManagementController). Cross-Space/display activation is expected to work per the
-    // design spec ("delegated to the existing Accessibility window activation path").
+    // No .optionOnScreenOnly: that flag excludes windows on other Spaces entirely, which would
+    // make them unreachable from the switcher (the switcher and layout share this one catalogue
+    // source — see WindowManagementController). Cross-Space/display activation is expected to
+    // work per the design spec ("delegated to the existing Accessibility window activation
+    // path"), so enumeration must surface those windows for AccessibilityWindowService.activate
+    // to have anything to act on.
     let metadata =
       CGWindowListCopyWindowInfo([.excludeDesktopElements], kCGNullWindowID)
       as? [[String: Any]] ?? []
@@ -32,18 +29,14 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     var windows: [CataloguedWindow] = []
 
     for application in NSWorkspace.shared.runningApplications
-    where application.processIdentifier > 0 && application.activationPolicy != .prohibited {
-      // Restrict the (slow, synchronous, cross-process) AX window query to applications that can
-      // plausibly own windows at all. Without this, every background/helper process -- most of
-      // which don't support Accessibility and can each cost up to a full AX timeout -- gets
-      // queried too, stalling this call long enough to visibly stutter the switcher. This used to
-      // be a side effect of requiring a CGWindowList entry, which is no longer required (see
-      // above), so it needs restoring explicitly; activationPolicy is an in-process property read
-      // with no IPC cost, unlike the AX query it's guarding.
+    where application.processIdentifier > 0 {
       let candidatesByWindowNumber = Dictionary(
         uniqueKeysWithValues: metadata.compactMap {
           candidate(from: $0, processIdentifier: application.processIdentifier)
         }.map { ($0.windowNumber, $0) })
+      guard !candidatesByWindowNumber.isEmpty else {
+        continue
+      }
       let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
       let axWindows =
         attributeValue(kAXWindowsAttribute as CFString, of: applicationElement) as? [AXUIElement]
@@ -51,10 +44,8 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
 
       for axWindow in axWindows {
         var windowNumber: CGWindowID = 0
-        guard _AXUIElementGetWindow(axWindow, &windowNumber) == .success else {
-          continue
-        }
-        guard let frame = candidatesByWindowNumber[windowNumber]?.frame ?? axFrame(of: axWindow)
+        guard _AXUIElementGetWindow(axWindow, &windowNumber) == .success,
+          let candidate = candidatesByWindowNumber[windowNumber]
         else {
           continue
         }
@@ -69,32 +60,12 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
             role: role(of: axWindow),
             isMinimized: (attributeValue(kAXMinimizedAttribute as CFString, of: axWindow) as? Bool)
               ?? false,
-            visibleFrame: visibleFrame(containing: frame)))
+            visibleFrame: visibleFrame(containing: candidate.frame)))
       }
     }
 
     elements = refreshedElements
     return windows
-  }
-
-  /// Falls back to the AX position/size attributes for a window's frame when CGWindowList has no
-  /// entry for it -- the case for every window on an inactive Space, which CGWindowList never
-  /// reports regardless of options.
-  private func axFrame(of element: AXUIElement) -> CGRect? {
-    guard
-      let positionValue = attributeValue(kAXPositionAttribute as CFString, of: element),
-      let sizeValue = attributeValue(kAXSizeAttribute as CFString, of: element)
-    else {
-      return nil
-    }
-    var origin = CGPoint.zero
-    var size = CGSize.zero
-    guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &origin),
-      AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
-    else {
-      return nil
-    }
-    return CGRect(origin: origin, size: size)
   }
 
   func focusedWindowID() -> WindowID? {
