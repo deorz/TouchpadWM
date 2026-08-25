@@ -1,12 +1,4 @@
 import CoreGraphics
-import OSLog
-
-/// TEMPORARY diagnostic logging while debugging why suppression isn't blocking scroll
-/// bleed-through in practice. Stream it with:
-///   log stream --predicate 'subsystem == "com.touchpadwm.app"' --level debug
-/// Remove once the root cause is confirmed.
-private let scrollSuppressorLog = Logger(
-  subsystem: "com.touchpadwm.app", category: "ScrollSuppressor")
 
 /// Suppresses continuous (trackpad) scroll-wheel events system-wide while a switcher gesture is
 /// in progress. The private multitouch bridge only reads raw touch data; it has no relationship
@@ -28,8 +20,6 @@ final class ScrollEventSuppressor {
 
   var isSuppressing = false {
     didSet {
-      scrollSuppressorLog.debug(
-        "isSuppressing \(oldValue) -> \(self.isSuppressing), tap present: \(self.eventTap != nil)")
       guard isSuppressing != oldValue, let eventTap else {
         return
       }
@@ -39,7 +29,6 @@ final class ScrollEventSuppressor {
 
   func start() {
     guard eventTap == nil else {
-      scrollSuppressorLog.debug("start() called again; tap already exists")
       return
     }
 
@@ -53,12 +42,10 @@ final class ScrollEventSuppressor {
       userInfo: Unmanaged.passUnretained(self).toOpaque())
 
     guard let eventTap else {
-      scrollSuppressorLog.error("CGEvent.tapCreate returned nil -- not Accessibility-trusted?")
       return
     }
     eventTapSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
     guard let eventTapSource else {
-      scrollSuppressorLog.error("CFMachPortCreateRunLoopSource returned nil")
       self.eventTap = nil
       return
     }
@@ -66,7 +53,6 @@ final class ScrollEventSuppressor {
     // Created disabled: the tap only starts delivering events once a switcher session actually
     // opens (see syncScrollSuppression() in SwitcherGestureCoordinator).
     CGEvent.tapEnable(tap: eventTap, enable: isSuppressing)
-    scrollSuppressorLog.debug("tap created successfully, enabled: \(self.isSuppressing)")
   }
 
   fileprivate static func handle(
@@ -79,19 +65,15 @@ final class ScrollEventSuppressor {
     }
     let suppressor = Unmanaged<ScrollEventSuppressor>.fromOpaque(userInfo).takeUnretainedValue()
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-      scrollSuppressorLog.debug("tap disabled by OS (timeout or user input); re-enabling if needed")
       if let eventTap = suppressor.eventTap, suppressor.isSuppressing {
         CGEvent.tapEnable(tap: eventTap, enable: true)
       }
       return Unmanaged.passUnretained(event)
     }
-    let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous)
-    guard isContinuous != 0 else {
-      scrollSuppressorLog.debug("scrollWheel event NOT continuous (discrete) -- letting through")
+    guard event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0 else {
       // Discrete (mouse-wheel) scrolling is never suppressed.
       return Unmanaged.passUnretained(event)
     }
-    scrollSuppressorLog.debug("blocking continuous scrollWheel event")
     return nil
   }
 }
