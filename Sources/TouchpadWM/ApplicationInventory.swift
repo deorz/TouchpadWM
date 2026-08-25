@@ -41,10 +41,11 @@ struct ApplicationInventory: ApplicationInventorying {
   }
 
   private func applications(in root: URL) -> [InstalledApplication] {
-    guard let enumerator = FileManager.default.enumerator(
-      at: root,
-      includingPropertiesForKeys: nil,
-      options: [.skipsHiddenFiles, .skipsPackageDescendants])
+    guard
+      let enumerator = FileManager.default.enumerator(
+        at: root,
+        includingPropertiesForKeys: nil,
+        options: [.skipsHiddenFiles, .skipsPackageDescendants])
     else {
       return []
     }
@@ -57,7 +58,8 @@ struct ApplicationInventory: ApplicationInventorying {
       else {
         return nil
       }
-      let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+      let name =
+        (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
         ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
         ?? url.deletingPathExtension().lastPathComponent
       return InstalledApplication(bundleIdentifier: bundleIdentifier, name: name, url: url)

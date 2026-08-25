@@ -67,7 +67,8 @@ final class WindowManagementControllerTests: XCTestCase {
   }
 
   func testStoredSwitcherExclusionAppliesOnTheNextSwitcherRefresh() {
-    let service = InMemoryWindowService(windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
     let store = InMemoryAppRuleStore([
       "com.example.app": .init(includeInSwitcher: false, manageLayout: true)
     ])
@@ -77,7 +78,8 @@ final class WindowManagementControllerTests: XCTestCase {
   }
 
   func testStoredLayoutExclusionMakesTheNextLayoutCommandHaveNoFocusedManagedWindow() {
-    let service = InMemoryWindowService(windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
     let store = InMemoryAppRuleStore([
       "com.example.app": .init(includeInSwitcher: true, manageLayout: false)
     ])
@@ -87,7 +89,8 @@ final class WindowManagementControllerTests: XCTestCase {
   }
 
   func testUpdatingARuleIsUsedByALaterSwitcherRefresh() {
-    let service = InMemoryWindowService(windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
     let store = InMemoryAppRuleStore()
     let controller = WindowManagementController(service: service, ruleStore: store)
     controller.setRule(
