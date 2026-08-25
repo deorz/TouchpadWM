@@ -47,7 +47,8 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
     let commands = recognizer.consume(
       frame(y: 0.5 + 2 * SwitcherGestureRecognizer.rowSelectionThreshold))
 
-    XCTAssertEqual(commands, [.moveSwitcherSelection(.previous), .moveSwitcherSelection(.previous)])
+    XCTAssertEqual(
+      commands, [.moveSwitcherSelection(.previous), .moveSwitcherSelection(.previous)])
   }
 
   func testLiftingAllFingersActivatesTheSelection() {

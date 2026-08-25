@@ -1,7 +1,7 @@
+import TouchpadWMSpike
 import XCTest
 
 @testable import TouchpadWM
-import TouchpadWMSpike
 
 final class SharedGestureTypesTests: XCTestCase {
   func testTouchpadWMCanDriveTheSharedRecognizerAcrossThreeFingerContacts() {

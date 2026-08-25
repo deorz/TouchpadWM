@@ -6,8 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "TouchpadWM", targets: ["TouchpadWM"]),
-        .executable(name: "TouchpadWMSpike", targets: ["TouchpadWMSpikeConsole"]),
-        .library(name: "TouchpadWMSpike", targets: ["TouchpadWMSpike"])
+        .executable(name: "TouchpadWMSpike", targets: ["TouchpadWMSpikeConsole"])
     ],
     dependencies: [
         .package(url: "https://github.com/Kyome22/OpenMultitouchSupport.git", from: "4.0.0"),
