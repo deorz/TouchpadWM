@@ -2,36 +2,58 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
+/// Resolves the CGWindowID owned by an AXUIElement window. ApplicationServices does not expose
+/// this mapping publicly; every major macOS window manager (AeroSpace, yabai, AltTab) relies on
+/// this same private symbol because title- or geometry-based matching is ambiguous whenever two
+/// windows of one app share a title. Confine this private-symbol use to this file, mirroring how
+/// MultitouchBridge.swift isolates its own private-framework access.
+@_silgen_name("_AXUIElementGetWindow")
+@discardableResult
+private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: inout CGWindowID)
+  -> AXError
+
 final class AccessibilityWindowService: AccessibilityWindowServicing {
   private var elements: [WindowID: AXUIElement] = [:]
 
   func refreshWindows() -> [CataloguedWindow] {
-    let metadata = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+    let metadata =
+      CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
       as? [[String: Any]] ?? []
     var refreshedElements: [WindowID: AXUIElement] = [:]
     var windows: [CataloguedWindow] = []
 
-    for application in NSWorkspace.shared.runningApplications where application.processIdentifier > 0 {
-      let candidates = metadata.compactMap { candidate(from: $0, processIdentifier: application.processIdentifier) }
-      var unusedCandidates = candidates
+    for application in NSWorkspace.shared.runningApplications
+    where application.processIdentifier > 0 {
+      let candidatesByWindowNumber = Dictionary(
+        uniqueKeysWithValues: metadata.compactMap {
+          candidate(from: $0, processIdentifier: application.processIdentifier)
+        }.map { ($0.windowNumber, $0) })
+      guard !candidatesByWindowNumber.isEmpty else {
+        continue
+      }
       let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
-      let axWindows = attributeValue(kAXWindowsAttribute as CFString, of: applicationElement) as? [AXUIElement] ?? []
+      let axWindows =
+        attributeValue(kAXWindowsAttribute as CFString, of: applicationElement) as? [AXUIElement]
+        ?? []
 
       for axWindow in axWindows {
-        let title = (attributeValue(kAXTitleAttribute as CFString, of: axWindow) as? String) ?? ""
-        guard let index = unusedCandidates.firstIndex(where: { $0.title == title }) else {
+        var windowNumber: CGWindowID = 0
+        guard _AXUIElementGetWindow(axWindow, &windowNumber) == .success,
+          let candidate = candidatesByWindowNumber[windowNumber]
+        else {
           continue
         }
-        let candidate = unusedCandidates.remove(at: index)
-        let id = WindowID(processIdentifier: application.processIdentifier, windowNumber: candidate.windowNumber)
+        let id = WindowID(
+          processIdentifier: application.processIdentifier, windowNumber: windowNumber)
         refreshedElements[id] = axWindow
         windows.append(
           CataloguedWindow(
             id: id,
             bundleIdentifier: application.bundleIdentifier ?? "",
-            title: title,
+            title: (attributeValue(kAXTitleAttribute as CFString, of: axWindow) as? String) ?? "",
             role: role(of: axWindow),
-            isMinimized: (attributeValue(kAXMinimizedAttribute as CFString, of: axWindow) as? Bool) ?? false,
+            isMinimized: (attributeValue(kAXMinimizedAttribute as CFString, of: axWindow) as? Bool)
+              ?? false,
             visibleFrame: visibleFrame(containing: candidate.frame)))
       }
     }
@@ -42,11 +64,17 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
 
   func focusedWindowID() -> WindowID? {
     let system = AXUIElementCreateSystemWide()
-    guard let applicationValue = attributeValue(kAXFocusedApplicationAttribute as CFString, of: system) else {
+    guard
+      let applicationValue = attributeValue(kAXFocusedApplicationAttribute as CFString, of: system)
+    else {
       return nil
     }
+    // `as?` to a CoreFoundation type here is flagged by the compiler as an unconditional cast
+    // (AXUIElement bridges as a type-erased CFTypeRef, with no runtime CFGetTypeID check either
+    // way), so `as!` is required and is not a genuine crash risk.
     let application = applicationValue as! AXUIElement
-    guard let windowValue = attributeValue(kAXFocusedWindowAttribute as CFString, of: application) else {
+    guard let windowValue = attributeValue(kAXFocusedWindowAttribute as CFString, of: application)
+    else {
       return nil
     }
     let focusedWindow = windowValue as! AXUIElement
@@ -59,10 +87,13 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     }
     var origin = frame.origin
     var size = frame.size
-    guard let position = AXValueCreate(.cgPoint, &origin), let dimensions = AXValueCreate(.cgSize, &size) else {
+    guard let position = AXValueCreate(.cgPoint, &origin),
+      let dimensions = AXValueCreate(.cgSize, &size)
+    else {
       return false
     }
-    return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, position) == .success
+    return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, position)
+      == .success
       && AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, dimensions) == .success
   }
 
@@ -77,10 +108,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     guard let frame = CGRect(dictionaryRepresentation: bounds) else {
       return nil
     }
-    return Candidate(
-      windowNumber: CGWindowID(windowNumber.uint32Value),
-      title: (metadata[kCGWindowName as String] as? String) ?? "",
-      frame: frame)
+    return Candidate(windowNumber: CGWindowID(windowNumber.uint32Value), frame: frame)
   }
 
   private func attributeValue(_ attribute: CFString, of element: AXUIElement) -> CFTypeRef? {
@@ -89,13 +117,9 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   }
 
   private func role(of element: AXUIElement) -> WindowRole {
-    let role = attributeValue(kAXRoleAttribute as CFString, of: element) as? String
-    let subrole = attributeValue(kAXSubroleAttribute as CFString, of: element) as? String
-    if role == "AXSheet" { return .sheet }
-    if role == "AXDialog" { return .dialog }
-    if role == "AXPopover" { return .popover }
-    if subrole == "AXFloatingWindow" || subrole == "AXUtilityWindow" { return .floating }
-    return role == "AXWindow" ? .normal : .unknown
+    AccessibilityWindowMetadata.role(
+      role: attributeValue(kAXRoleAttribute as CFString, of: element) as? String,
+      subrole: attributeValue(kAXSubroleAttribute as CFString, of: element) as? String)
   }
 
   private func visibleFrame(containing frame: CGRect) -> CGRect {
@@ -108,6 +132,5 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
 
 private struct Candidate {
   let windowNumber: CGWindowID
-  let title: String
   let frame: CGRect
 }

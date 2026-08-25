@@ -35,20 +35,30 @@ final class WindowManagementControllerTests: XCTestCase {
   }
 
   @MainActor
-  func testAvailableAppStateDelegatesLayoutCommandToTheController() {
-    let controller = RecordingWindowManager(result: .applied)
-    let state = AppState(permissionChecker: PermissionSource(isTrusted: true), windowManagement: controller)
+  func testAvailableAppStateMapsEachControllerResultToItsStatusText() {
+    let cases: [(result: LayoutOperationResult, command: LayoutCommand, status: String)] = [
+      (.applied, .rightHalf, "Applied right half layout."),
+      (.noFocusedManagedWindow, .leftHalf, "No managed focused window."),
+      (.inaccessibleWindow, .masterStack, "The focused window is not accessible."),
+    ]
 
-    state.performLayoutCommand(.rightHalf)
+    for testCase in cases {
+      let controller = RecordingWindowManager(result: testCase.result)
+      let state = AppState(
+        permissionChecker: PermissionSource(isTrusted: true), windowManagement: controller)
 
-    XCTAssertEqual(controller.receivedZones, [.rightHalf])
-    XCTAssertEqual(state.windowManagementStatus, "Applied right half layout.")
+      state.performLayoutCommand(testCase.command)
+
+      XCTAssertEqual(controller.receivedZones, [testCase.command.zone])
+      XCTAssertEqual(state.windowManagementStatus, testCase.status)
+    }
   }
 
   @MainActor
   func testUnavailableAppStateDoesNotDelegateLayoutCommand() {
     let controller = RecordingWindowManager(result: .applied)
-    let state = AppState(permissionChecker: PermissionSource(isTrusted: false), windowManagement: controller)
+    let state = AppState(
+      permissionChecker: PermissionSource(isTrusted: false), windowManagement: controller)
 
     state.performLayoutCommand(.masterStack)
 
@@ -76,22 +86,6 @@ final class WindowManagementControllerTests: XCTestCase {
       role: role,
       isMinimized: false,
       visibleFrame: CGRect(x: 0, y: 0, width: 1000, height: 800))
-  }
-}
-
-private final class PermissionSource: AccessibilityPermissionChecking {
-  let trusted: Bool
-
-  init(isTrusted: Bool) {
-    trusted = isTrusted
-  }
-
-  func isTrusted() -> Bool {
-    trusted
-  }
-
-  func openSettings() -> Bool {
-    true
   }
 }
 

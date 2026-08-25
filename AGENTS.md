@@ -6,6 +6,7 @@
 - Keep all private `MultitouchSupport.framework` access inside `Sources/TouchpadWMSpike/MultitouchBridge.swift`.
 - Keep gesture recognition independent of private-framework types. Add tests for every behavior change before implementation.
 - Treat the console spike harness as a hardware-validation tool; reuse the bridge and recognizer in the native app rather than duplicating them.
+- `Sources/TouchpadWM/AccessibilityWindowService.swift` may call the private `_AXUIElementGetWindow` ApplicationServices symbol to resolve an AXUIElement's CGWindowID (the same technique AeroSpace, yabai, and AltTab use); title- or geometry-based matching is ambiguous whenever an app has two windows with the same title. Confine that private-symbol use to this one file.
 
 ## Required quality gates
 
@@ -17,7 +18,7 @@ Tests/QualityGateTests/quality.sh
 node --test .dev-dashboard/tests/status.test.mjs
 ```
 
-`Scripts/quality.sh` runs Swift formatting lint, `swift build`, `swift test --enable-code-coverage`, and enforces at least **80% line coverage** for unit-testable production code. It excludes test/build artifacts plus the hardware-only `MultitouchBridge.swift` and console `main.swift`; retain their required real-trackpad acceptance test. It uses the selected Xcode toolchain's `llvm-cov` directly; do not substitute `xccov`.
+`Scripts/quality.sh` runs Swift formatting lint, `swift build`, `swift test --enable-code-coverage`, and enforces at least **80% line coverage** for unit-testable production code. It excludes test/build artifacts plus the hardware- and OS-boundary adapters `MultitouchBridge.swift`, console `main.swift`, and `AccessibilityWindowService.swift`; retain their required real-hardware/real-Accessibility-permission acceptance test. Extract any pure logic out of these adapters (e.g. `AccessibilityWindowMetadata.swift`) into unit-tested files rather than excluding more than the adapter itself. It uses the selected Xcode toolchain's `llvm-cov` directly; do not substitute `xccov`.
 
 To apply formatting deliberately, run:
 

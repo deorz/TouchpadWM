@@ -45,7 +45,8 @@ struct WindowCatalogue {
   var managedWindows: [CataloguedWindow] {
     orderedWindows.filter { window in
       let rule = rule(for: window)
-      return rule.manageLayout && !window.isMinimized && window.role == .normal
+      return rule.manageLayout && !window.isMinimized
+        && (window.role == .normal || window.role == .unknown)
     }
   }
 

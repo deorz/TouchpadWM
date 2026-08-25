@@ -34,7 +34,9 @@ enum LayoutGeometry {
     }
   }
 
-  private static func horizontalFrames(in frame: CGRect, leftRatio: CGFloat) -> (left: CGRect, right: CGRect) {
+  private static func horizontalFrames(in frame: CGRect, leftRatio: CGFloat) -> (
+    left: CGRect, right: CGRect
+  ) {
     let availableWidth = frame.width - gap
     let leftWidth = availableWidth * leftRatio / (leftRatio + 1)
     let rightWidth = availableWidth - leftWidth
@@ -45,8 +47,8 @@ enum LayoutGeometry {
 
   private static func verticalFrames(in frame: CGRect) -> (top: CGRect, bottom: CGRect) {
     let height = (frame.height - gap) / 2
-    let bottom = CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: height)
-    let top = CGRect(x: frame.minX, y: bottom.maxY + gap, width: frame.width, height: height)
+    let top = CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: height)
+    let bottom = CGRect(x: frame.minX, y: top.maxY + gap, width: frame.width, height: height)
     return (top, bottom)
   }
 }

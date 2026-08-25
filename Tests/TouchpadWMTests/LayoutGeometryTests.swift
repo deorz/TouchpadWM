@@ -27,15 +27,15 @@ final class LayoutGeometryTests: XCTestCase {
       CGRect(x: 848, y: 58, width: 244, height: 784))
   }
 
-  func testBSPRightZonesSplitTheInsetRightHalfVertically() {
+  func testBSPRightZonesUseAXScreenCoordinates() {
     let frame = CGRect(x: 0, y: 0, width: 1000, height: 800)
 
     XCTAssertEqual(
       LayoutGeometry.frame(for: .topRightQuarter, in: frame),
-      CGRect(x: 504, y: 404, width: 488, height: 388))
+      CGRect(x: 504, y: 8, width: 488, height: 388))
     XCTAssertEqual(
       LayoutGeometry.frame(for: .bottomRightQuarter, in: frame),
-      CGRect(x: 504, y: 8, width: 488, height: 388))
+      CGRect(x: 504, y: 404, width: 488, height: 388))
   }
 
   func testEveryKeyboardLayoutCommandHasItsSpecifiedZone() {

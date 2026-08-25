@@ -16,8 +16,16 @@ final class WindowCatalogueTests: XCTestCase {
     var catalogue = WindowCatalogue()
     catalogue.replaceWindows([normalWindow, utilityWindow, sheetWindow])
 
-    XCTAssertEqual(catalogue.windowsForSwitcher.map(\.id), [normalWindow.id, utilityWindow.id, sheetWindow.id])
+    XCTAssertEqual(
+      catalogue.windowsForSwitcher.map(\.id), [normalWindow.id, utilityWindow.id, sheetWindow.id])
     XCTAssertEqual(catalogue.managedWindows.map(\.id), [normalWindow.id])
+  }
+
+  func testUnknownRoleWindowsRemainManaged() {
+    var catalogue = WindowCatalogue()
+    catalogue.replaceWindows([unknownRoleWindow])
+
+    XCTAssertEqual(catalogue.managedWindows.map(\.id), [unknownRoleWindow.id])
   }
 
   func testAppRulesFilterSwitcherAndLayoutIndependently() {
@@ -56,6 +64,10 @@ final class WindowCatalogueTests: XCTestCase {
 
   private var sheetWindow: CataloguedWindow {
     window(id: 5, bundleIdentifier: "com.example.sheet", role: .sheet)
+  }
+
+  private var unknownRoleWindow: CataloguedWindow {
+    window(id: 8, bundleIdentifier: "com.example.unknown", role: .unknown)
   }
 
   private var oldWindow: CataloguedWindow {
