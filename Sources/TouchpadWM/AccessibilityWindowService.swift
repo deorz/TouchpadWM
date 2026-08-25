@@ -32,7 +32,14 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     var windows: [CataloguedWindow] = []
 
     for application in NSWorkspace.shared.runningApplications
-    where application.processIdentifier > 0 {
+    where application.processIdentifier > 0 && application.activationPolicy != .prohibited {
+      // Restrict the (slow, synchronous, cross-process) AX window query to applications that can
+      // plausibly own windows at all. Without this, every background/helper process -- most of
+      // which don't support Accessibility and can each cost up to a full AX timeout -- gets
+      // queried too, stalling this call long enough to visibly stutter the switcher. This used to
+      // be a side effect of requiring a CGWindowList entry, which is no longer required (see
+      // above), so it needs restoring explicitly; activationPolicy is an in-process property read
+      // with no IPC cost, unlike the AX query it's guarding.
       let candidatesByWindowNumber = Dictionary(
         uniqueKeysWithValues: metadata.compactMap {
           candidate(from: $0, processIdentifier: application.processIdentifier)
