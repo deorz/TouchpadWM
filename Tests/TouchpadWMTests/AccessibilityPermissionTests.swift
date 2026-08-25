@@ -48,6 +48,22 @@ final class AccessibilityPermissionTests: XCTestCase {
     XCTAssertEqual(source.isTrustedCallCount, 1)
   }
 
+  func testRequestsTrustPromptOnceAtInitWhenNotYetTrusted() {
+    let source = PermissionSource(isTrusted: false)
+
+    _ = AppState(permissionChecker: source)
+
+    XCTAssertEqual(source.requestTrustCallCount, 1)
+  }
+
+  func testDoesNotRequestTrustPromptWhenAlreadyTrustedAtInit() {
+    let source = PermissionSource(isTrusted: true)
+
+    _ = AppState(permissionChecker: source)
+
+    XCTAssertEqual(source.requestTrustCallCount, 0)
+  }
+
   func testStopsPollingOnceAccessBecomesAvailable() {
     let source = PermissionSource(isTrusted: false)
     let state = AppState(permissionChecker: source, refreshInterval: 0.03)

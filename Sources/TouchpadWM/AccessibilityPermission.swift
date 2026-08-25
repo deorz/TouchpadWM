@@ -11,6 +11,7 @@ enum AccessibilityPermissionState: Equatable {
 protocol AccessibilityPermissionChecking {
   func isTrusted() -> Bool
   func openSettings() -> Bool
+  func requestTrust()
 }
 
 protocol InputMonitoringPermissionChecking {
@@ -31,6 +32,17 @@ struct AccessibilityPermissionService: AccessibilityPermissionChecking {
       return false
     }
     return NSWorkspace.shared.open(url)
+  }
+
+  func requestTrust() {
+    // Passing the prompt option asks macOS itself to show its own "<App> would like to control
+    // this computer" Accessibility alert once, the same alert the system throws up incidentally
+    // when an untrusted process tries to create a session-level CGEventTap. isTrusted() above is
+    // deliberately left as a passive check (no prompt) so it stays safe to call from polling.
+    // kAXTrustedCheckOptionPrompt is imported as a global `var` (no Sendable overlay), which
+    // Swift 6 strict concurrency flags as unsafe from any context; its value is the stable,
+    // documented string "AXTrustedCheckOptionPrompt", so that literal is used directly instead.
+    _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
   }
 }
 
@@ -71,6 +83,10 @@ final class AppState {
     accessibilityPermission = permissionChecker.isTrusted() ? .available : .unavailable
     inputMonitoringPermission = inputMonitoringChecker.hasAccess() ? .available : .unavailable
     if accessibilityPermission == .unavailable {
+      // Ask macOS to show its own Accessibility permission alert once at launch, rather than
+      // requiring the user to notice the "Accessibility access required" menu item and open
+      // System Settings manually.
+      permissionChecker.requestTrust()
       startPolling()
     }
   }

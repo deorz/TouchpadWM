@@ -7,6 +7,7 @@ final class PermissionSource: AccessibilityPermissionChecking, InputMonitoringPe
   let opensSettings: Bool
   private(set) var isTrustedCallCount = 0
   private(set) var inputMonitoringRequestCount = 0
+  private(set) var requestTrustCallCount = 0
 
   init(
     isTrusted: Bool,
@@ -25,6 +26,10 @@ final class PermissionSource: AccessibilityPermissionChecking, InputMonitoringPe
 
   func openSettings() -> Bool {
     opensSettings
+  }
+
+  func requestTrust() {
+    requestTrustCallCount += 1
   }
 
   func hasAccess() -> Bool {
