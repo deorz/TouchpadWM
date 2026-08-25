@@ -13,6 +13,11 @@ protocol AccessibilityPermissionChecking {
   func openSettings() -> Bool
 }
 
+protocol InputMonitoringPermissionChecking {
+  func hasAccess() -> Bool
+  func requestAccess() -> Bool
+}
+
 struct AccessibilityPermissionService: AccessibilityPermissionChecking {
   func isTrusted() -> Bool {
     AXIsProcessTrusted()
@@ -29,26 +34,42 @@ struct AccessibilityPermissionService: AccessibilityPermissionChecking {
   }
 }
 
+struct InputMonitoringPermissionService: InputMonitoringPermissionChecking {
+  func hasAccess() -> Bool {
+    CGPreflightListenEventAccess()
+  }
+
+  func requestAccess() -> Bool {
+    CGRequestListenEventAccess()
+  }
+}
+
 @MainActor
 @Observable
 final class AppState {
   private(set) var accessibilityPermission: AccessibilityPermissionState
+  private(set) var inputMonitoringPermission: AccessibilityPermissionState
   private(set) var windowManagementStatus = ""
   private let permissionChecker: any AccessibilityPermissionChecking
+  private let inputMonitoringChecker: any InputMonitoringPermissionChecking
   private let windowManagement: any WindowManaging
   private let refreshInterval: TimeInterval
   private var permissionRefreshTimer: Timer?
 
   init(
     permissionChecker: any AccessibilityPermissionChecking = AccessibilityPermissionService(),
+    inputMonitoringChecker: any InputMonitoringPermissionChecking =
+      InputMonitoringPermissionService(),
     windowManagement: any WindowManaging = WindowManagementController(
       service: AccessibilityWindowService()),
     refreshInterval: TimeInterval = 2
   ) {
     self.permissionChecker = permissionChecker
+    self.inputMonitoringChecker = inputMonitoringChecker
     self.windowManagement = windowManagement
     self.refreshInterval = refreshInterval
     accessibilityPermission = permissionChecker.isTrusted() ? .available : .unavailable
+    inputMonitoringPermission = inputMonitoringChecker.hasAccess() ? .available : .unavailable
     if accessibilityPermission == .unavailable {
       startPolling()
     }
@@ -79,6 +100,11 @@ final class AppState {
 
   func openAccessibilitySettings() {
     _ = permissionChecker.openSettings()
+  }
+
+  func requestInputMonitoringAccess() {
+    _ = inputMonitoringChecker.requestAccess()
+    inputMonitoringPermission = inputMonitoringChecker.hasAccess() ? .available : .unavailable
   }
 
   func performLayoutCommand(_ command: LayoutCommand) {

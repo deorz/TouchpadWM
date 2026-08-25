@@ -27,13 +27,16 @@ final class AccessibilityPermissionTests: XCTestCase {
     XCTAssertEqual(state.accessibilityPermission, .available)
   }
 
-  func testOpeningSettingsDoesNotChangeUnavailablePermission() {
-    let source = PermissionSource(isTrusted: false, opensSettings: false)
-    let state = AppState(permissionChecker: source)
+  func testRequestingInputMonitoringRefreshesItsPermissionStatus() {
+    let source = PermissionSource(isTrusted: false, inputMonitoringAccess: false)
+    let state = AppState(permissionChecker: source, inputMonitoringChecker: source)
 
-    state.openAccessibilitySettings()
+    XCTAssertEqual(state.inputMonitoringPermission, .unavailable)
+    source.inputMonitoringAccess = true
+    state.requestInputMonitoringAccess()
 
-    XCTAssertEqual(state.accessibilityPermission, .unavailable)
+    XCTAssertEqual(source.inputMonitoringRequestCount, 1)
+    XCTAssertEqual(state.inputMonitoringPermission, .available)
   }
 
   func testDoesNotPollWhenAlreadyTrustedAtInit() {

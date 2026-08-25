@@ -23,10 +23,19 @@ struct TouchpadWMApp: App {
         state.refreshAccessibilityPermission()
       }
     }
+    .onChange(of: state.inputMonitoringPermission) { _, permission in
+      if permission == .available {
+        keyboardMonitor.start(
+          permission: { state.accessibilityPermission },
+          perform: state.performLayoutCommand)
+      }
+    }
   }
 }
 
 private struct StatusMenuView: View {
+  @Environment(\.openSettings) private var openSettings
+
   let state: AppState
   let keyboardMonitor: KeyboardEventMonitor
 
@@ -42,6 +51,17 @@ private struct StatusMenuView: View {
     Button("Refresh Accessibility Status") {
       state.refreshAccessibilityPermission()
     }
+    Text(
+      state.inputMonitoringPermission == .available
+        ? "Input Monitoring granted" : "Input Monitoring required for keyboard shortcuts")
+    if state.inputMonitoringPermission == .unavailable {
+      Button("Enable Input Monitoring") {
+        NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async {
+          state.requestInputMonitoringAccess()
+        }
+      }
+    }
     Divider()
     layoutButton("Left half", command: .leftHalf)
     layoutButton("Right half", command: .rightHalf)
@@ -54,15 +74,22 @@ private struct StatusMenuView: View {
       Text(state.windowManagementStatus)
     }
     Divider()
-    SettingsLink()
+    Button("Settings") {
+      NSApp.activate(ignoringOtherApps: true)
+      DispatchQueue.main.async {
+        openSettings()
+      }
+    }
     Button("Quit Touchpad WM") {
       NSApplication.shared.terminate(nil)
     }
     .onAppear {
       state.refreshAccessibilityPermission()
-      keyboardMonitor.start(
-        permission: { state.accessibilityPermission },
-        perform: state.performLayoutCommand)
+      if state.inputMonitoringPermission == .available {
+        keyboardMonitor.start(
+          permission: { state.accessibilityPermission },
+          perform: state.performLayoutCommand)
+      }
     }
   }
 
@@ -89,6 +116,17 @@ private struct SettingsView: View {
           state.refreshAccessibilityPermission()
         }
       }
+      Section("Input Monitoring") {
+        Text(
+          state.inputMonitoringPermission == .available
+            ? "Access granted" : "Keyboard shortcuts require access.")
+        Button("Enable Input Monitoring") {
+          NSApp.activate(ignoringOtherApps: true)
+          DispatchQueue.main.async {
+            state.requestInputMonitoringAccess()
+          }
+        }
+      }
       Section("App Rules") {
         Text("App Rules will appear here in a later milestone.")
       }
@@ -98,37 +136,91 @@ private struct SettingsView: View {
   }
 }
 
-@MainActor
 final class KeyboardEventMonitor {
-  private var monitor: Any?
+  private var eventTap: CFMachPort?
+  private var eventTapSource: CFRunLoopSource?
   private var router = KeyboardCommandRouter()
+  private var permission: (() -> AccessibilityPermissionState)?
+  private var perform: ((LayoutCommand) -> Void)?
 
   func start(
     permission: @escaping () -> AccessibilityPermissionState,
     perform: @escaping (LayoutCommand) -> Void
   ) {
-    guard monitor == nil else {
+    guard eventTap == nil else {
       return
     }
 
-    monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) {
-      [weak self] event in
-      guard let self, let input = Self.input(from: event) else {
-        return event
-      }
-      let didDispatch = router.consume(input, permission: permission(), perform: perform)
-      return didDispatch ? nil : event
+    self.permission = permission
+    self.perform = perform
+    let eventMask =
+      (CGEventMask(1) << CGEventType.flagsChanged.rawValue)
+      | (CGEventMask(1) << CGEventType.keyDown.rawValue)
+    eventTap = CGEvent.tapCreate(
+      tap: .cgSessionEventTap,
+      place: .headInsertEventTap,
+      options: .defaultTap,
+      eventsOfInterest: eventMask,
+      callback: keyboardEventTapCallback,
+      userInfo: Unmanaged.passUnretained(self).toOpaque())
+
+    guard let eventTap else {
+      return
     }
+    eventTapSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+    guard let eventTapSource else {
+      self.eventTap = nil
+      return
+    }
+    CFRunLoopAddSource(CFRunLoopGetMain(), eventTapSource, .commonModes)
+    CGEvent.tapEnable(tap: eventTap, enable: true)
   }
 
-  private static func input(from event: NSEvent) -> KeyboardInput? {
-    switch event.type {
+  fileprivate static func handle(
+    _ proxy: CGEventTapProxy,
+    _ type: CGEventType,
+    _ event: CGEvent,
+    _ userInfo: UnsafeMutableRawPointer?
+  ) -> Unmanaged<CGEvent>? {
+    guard let userInfo else {
+      return Unmanaged.passUnretained(event)
+    }
+    let monitor = Unmanaged<KeyboardEventMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+      if let eventTap = monitor.eventTap {
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+      }
+      return Unmanaged.passUnretained(event)
+    }
+    guard let input = input(from: type, event: event),
+      let permission = monitor.permission,
+      let perform = monitor.perform
+    else {
+      return Unmanaged.passUnretained(event)
+    }
+    let didDispatch = monitor.router.consume(
+      input, permission: permission(), perform: perform)
+    return didDispatch ? nil : Unmanaged.passUnretained(event)
+  }
+
+  private static func input(from type: CGEventType, event: CGEvent) -> KeyboardInput? {
+    let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+    return switch type {
     case .flagsChanged:
-      .flagsChanged(keyCode: event.keyCode)
+      .flagsChanged(keyCode: keyCode)
     case .keyDown:
-      .keyDown(keyCode: event.keyCode, shiftIsPressed: event.modifierFlags.contains(.shift))
+      .keyDown(keyCode: keyCode, shiftIsPressed: event.flags.contains(.maskShift))
     default:
       nil
     }
   }
+}
+
+private func keyboardEventTapCallback(
+  _ proxy: CGEventTapProxy,
+  _ type: CGEventType,
+  _ event: CGEvent,
+  _ userInfo: UnsafeMutableRawPointer?
+) -> Unmanaged<CGEvent>? {
+  KeyboardEventMonitor.handle(proxy, type, event, userInfo)
 }
