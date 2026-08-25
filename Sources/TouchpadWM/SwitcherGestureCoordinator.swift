@@ -11,6 +11,7 @@ final class SwitcherGestureCoordinator {
   private let switcherController: SwitcherController
   private let overlay: SwitcherOverlayPanelController
   private let bridge: MultitouchBridge
+  private let scrollSuppressor: ScrollEventSuppressor
   private var recognizer = SwitcherGestureRecognizer()
   private var listenTask: Task<Void, Never>?
 
@@ -19,14 +20,17 @@ final class SwitcherGestureCoordinator {
   init(
     switcherController: SwitcherController,
     overlay: SwitcherOverlayPanelController,
-    bridge: MultitouchBridge = MultitouchBridge()
+    bridge: MultitouchBridge = MultitouchBridge(),
+    scrollSuppressor: ScrollEventSuppressor = ScrollEventSuppressor()
   ) {
     self.switcherController = switcherController
     self.overlay = overlay
     self.bridge = bridge
+    self.scrollSuppressor = scrollSuppressor
   }
 
   func start() {
+    scrollSuppressor.start()
     guard listenTask == nil, bridge.start() else {
       return
     }
@@ -43,6 +47,7 @@ final class SwitcherGestureCoordinator {
     }
     switcherController.cancel()
     overlay.hide()
+    syncScrollSuppression()
   }
 
   private func handle(_ frame: TouchFrame) {
@@ -67,6 +72,7 @@ final class SwitcherGestureCoordinator {
     case .activateSwitcherSelection:
       switcherController.activateSelection()
       overlay.hide()
+      syncScrollSuppression()
     }
   }
 
@@ -76,5 +82,13 @@ final class SwitcherGestureCoordinator {
     } else {
       overlay.hide()
     }
+    syncScrollSuppression()
+  }
+
+  /// Scroll suppression tracks the switcher session directly rather than the raw gesture: this
+  /// keeps it off whenever the switcher itself doesn't open (Right Option held, or no eligible
+  /// windows), and off as soon as the overlay closes for any reason (activation or cancel).
+  private func syncScrollSuppression() {
+    scrollSuppressor.isSuppressing = switcherController.session != nil
   }
 }
