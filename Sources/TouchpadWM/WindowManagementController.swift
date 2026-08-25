@@ -10,6 +10,7 @@ protocol AccessibilityWindowServicing: AnyObject {
   func refreshWindows() -> [CataloguedWindow]
   func focusedWindowID() -> WindowID?
   func apply(_ frame: CGRect, to id: WindowID) -> Bool
+  func activate(_ id: WindowID) -> Bool
 }
 
 protocol WindowManaging: AnyObject {

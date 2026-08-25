@@ -66,6 +66,15 @@ final class WindowManagementControllerTests: XCTestCase {
     XCTAssertEqual(state.windowManagementStatus, "Accessibility access is required.")
   }
 
+  func testActivatingAKnownWindowRecordsItAndActivatingAnUnknownWindowFails() {
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+
+    XCTAssertTrue(service.activate(focusedNormalWindow.id))
+    XCTAssertEqual(service.activatedIDs, [focusedNormalWindow.id])
+    XCTAssertFalse(service.activate(WindowID(processIdentifier: 999, windowNumber: 999)))
+  }
+
   private var focusedNormalWindow: CataloguedWindow {
     window(id: 1, role: .normal)
   }
@@ -108,6 +117,7 @@ private final class InMemoryWindowService: AccessibilityWindowServicing {
   let focusedID: WindowID?
   let acceptsMutations: Bool
   private(set) var appliedFrames: [WindowID: CGRect] = [:]
+  private(set) var activatedIDs: [WindowID] = []
 
   init(windows: [CataloguedWindow], focusedID: WindowID?, acceptsMutations: Bool = true) {
     self.windows = windows
@@ -128,6 +138,14 @@ private final class InMemoryWindowService: AccessibilityWindowServicing {
       return false
     }
     appliedFrames[id] = frame
+    return true
+  }
+
+  func activate(_ id: WindowID) -> Bool {
+    guard windows.contains(where: { $0.id == id }) else {
+      return false
+    }
+    activatedIDs.append(id)
     return true
   }
 }

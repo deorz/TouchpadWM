@@ -97,6 +97,20 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
       && AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, dimensions) == .success
   }
 
+  func activate(_ id: WindowID) -> Bool {
+    guard let element = elements[id] else {
+      return false
+    }
+    let raised = AXUIElementPerformAction(element, kAXRaiseAction as CFString) == .success
+    let focused =
+      AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+      == .success
+    if let application = NSRunningApplication(processIdentifier: id.processIdentifier) {
+      application.activate(options: [.activateIgnoringOtherApps])
+    }
+    return raised && focused
+  }
+
   private func candidate(from metadata: [String: Any], processIdentifier: pid_t) -> Candidate? {
     guard (metadata[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == processIdentifier,
       let windowNumber = metadata[kCGWindowNumber as String] as? NSNumber,
