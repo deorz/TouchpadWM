@@ -7,6 +7,8 @@
 - Keep gesture recognition independent of private-framework types. Add tests for every behavior change before implementation.
 - Treat the console spike harness as a hardware-validation tool; reuse the bridge and recognizer in the native app rather than duplicating them.
 - `Sources/TouchpadWM/AccessibilityWindowService.swift` may call the private `_AXUIElementGetWindow` ApplicationServices symbol to resolve an AXUIElement's CGWindowID (the same technique AeroSpace, yabai, and AltTab use); title- or geometry-based matching is ambiguous whenever an app has two windows with the same title. Confine that private-symbol use to this one file.
+- `Sources/TouchpadWM/SwitcherGestureCoordinator.swift`, `Sources/TouchpadWM/SwitcherOverlayPanel.swift`, and `Sources/TouchpadWM/ScrollEventSuppressor.swift` are hardware/AppKit-boundary adapters (live trackpad bridge consumption, `NSPanel` windowing, and a `CGEventTap` suppressing scroll-wheel bleed-through while a switcher gesture is active, respectively) and are excluded from the coverage floor on the same basis as `AccessibilityWindowService.swift`; their decision logic is extracted into the unit-tested `SwitcherGestureRecognizer`, `SwitcherController`, and `SwitcherOverlayGeometry`.
+- `TouchpadWMSpike` is a library target; the console hardware-validation harness lives in the separate `TouchpadWMSpikeConsole` executable target (`Sources/TouchpadWMSpikeConsole/main.swift`) so `TouchpadWM` can depend on and reuse `TouchpadWMSpike`'s types from production code (SwiftPM cannot link a non-test target against another executable target's symbols).
 
 ## Required quality gates
 
@@ -18,7 +20,7 @@ Tests/QualityGateTests/quality.sh
 node --test .dev-dashboard/tests/status.test.mjs
 ```
 
-`Scripts/quality.sh` runs Swift formatting lint, `swift build`, `swift test --enable-code-coverage`, and enforces at least **80% line coverage** for unit-testable production code. It excludes test/build artifacts plus the hardware- and OS-boundary adapters `MultitouchBridge.swift`, console `main.swift`, and `AccessibilityWindowService.swift`; retain their required real-hardware/real-Accessibility-permission acceptance test. Extract any pure logic out of these adapters (e.g. `AccessibilityWindowMetadata.swift`) into unit-tested files rather than excluding more than the adapter itself. It uses the selected Xcode toolchain's `llvm-cov` directly; do not substitute `xccov`.
+`Scripts/quality.sh` runs Swift formatting lint, `swift build`, `swift test --enable-code-coverage`, and enforces at least **80% line coverage** for unit-testable production code. It excludes test/build artifacts plus the hardware- and OS-boundary adapters `MultitouchBridge.swift`, console `main.swift` (`Sources/TouchpadWMSpikeConsole/main.swift`), `AccessibilityWindowService.swift`, `SwitcherGestureCoordinator.swift`, `SwitcherOverlayPanel.swift`, and `ScrollEventSuppressor.swift`; retain their required real-hardware/real-Accessibility-permission acceptance test. Extract any pure logic out of these adapters (e.g. `AccessibilityWindowMetadata.swift`, `SwitcherGestureRecognizer.swift`, `SwitcherOverlayGeometry.swift`) into unit-tested files rather than excluding more than the adapter itself. It uses the selected Xcode toolchain's `llvm-cov` directly; do not substitute `xccov`.
 
 To apply formatting deliberately, run:
 

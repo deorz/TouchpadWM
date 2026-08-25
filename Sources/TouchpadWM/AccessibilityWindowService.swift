@@ -16,8 +16,14 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private var elements: [WindowID: AXUIElement] = [:]
 
   func refreshWindows() -> [CataloguedWindow] {
+    // No .optionOnScreenOnly: that flag excludes windows on other Spaces entirely, which would
+    // make them unreachable from the switcher (the switcher and layout share this one catalogue
+    // source — see WindowManagementController). Cross-Space/display activation is expected to
+    // work per the design spec ("delegated to the existing Accessibility window activation
+    // path"), so enumeration must surface those windows for AccessibilityWindowService.activate
+    // to have anything to act on.
     let metadata =
-      CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+      CGWindowListCopyWindowInfo([.excludeDesktopElements], kCGNullWindowID)
       as? [[String: Any]] ?? []
     var refreshedElements: [WindowID: AXUIElement] = [:]
     var windows: [CataloguedWindow] = []
@@ -95,6 +101,20 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, position)
       == .success
       && AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, dimensions) == .success
+  }
+
+  func activate(_ id: WindowID) -> Bool {
+    guard let element = elements[id] else {
+      return false
+    }
+    let raised = AXUIElementPerformAction(element, kAXRaiseAction as CFString) == .success
+    let focused =
+      AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+      == .success
+    if let application = NSRunningApplication(processIdentifier: id.processIdentifier) {
+      application.activate()
+    }
+    return raised && focused
   }
 
   private func candidate(from metadata: [String: Any], processIdentifier: pid_t) -> Candidate? {

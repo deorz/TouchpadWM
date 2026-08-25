@@ -4,11 +4,41 @@ import SwiftUI
 @main
 struct TouchpadWMApp: App {
   @Environment(\.scenePhase) private var scenePhase
-  @State private var state = AppState()
+  @State private var state: AppState
   @State private var keyboardMonitor = KeyboardEventMonitor()
+  @State private var overlay = SwitcherOverlayPanelController()
+  @State private var switcherCoordinator: SwitcherGestureCoordinator
 
   init() {
     NSApplication.shared.setActivationPolicy(.accessory)
+    // A one-time warm-up activation. Without ever activating once, an .accessory-policy app's
+    // NSPanel windows (the switcher overlay) can silently fail to actually order to the front
+    // on their first show, even though orderFrontRegardless() reports success -- a known AppKit
+    // quirk for background/accessory apps that have never been made the active app. This does
+    // not conflict with the overlay panel's own .nonactivatingPanel behavior: that governs
+    // whether opening the switcher steals focus on each gesture, not this unrelated one-time
+    // startup step, and activating a windowless accessory app has no visible effect.
+    NSApp.activate(ignoringOtherApps: true)
+    let windowManagement = WindowManagementController(service: AccessibilityWindowService())
+    let overlay = SwitcherOverlayPanelController()
+    let switcherController = SwitcherController(windowManaging: windowManagement)
+    _state = State(initialValue: AppState(windowManagement: windowManagement))
+    _overlay = State(initialValue: overlay)
+    let switcherCoordinator = SwitcherGestureCoordinator(
+      switcherController: switcherController, overlay: overlay)
+    _switcherCoordinator = State(initialValue: switcherCoordinator)
+
+    // Started unconditionally here rather than from the scenePhase onChange below: for an
+    // .accessory-policy app, scenePhase reaching .active depends on a real activation transition
+    // happening at some point after launch (e.g. opening Settings). Relying on that onChange to
+    // start the trackpad bridge meant the switcher gesture silently did nothing
+    // until the user happened to trigger one -- the gesture and its keyboard modifiers need no
+    // app activation to function, so they start as soon as the app object exists.
+    keyboardMonitor.onEscape = { switcherCoordinator.cancelOpenSession() }
+    keyboardMonitor.rightOptionDidChange = { isPressed in
+      switcherCoordinator.isRightOptionPressed = isPressed
+    }
+    switcherCoordinator.start()
   }
 
   var body: some Scene {
@@ -19,8 +49,20 @@ struct TouchpadWMApp: App {
       SettingsView(state: state)
     }
     .onChange(of: scenePhase) { _, phase in
-      if phase == .active {
-        state.refreshAccessibilityPermission()
+      guard phase == .active else {
+        return
+      }
+      state.refreshAccessibilityPermission()
+    }
+    .onChange(of: state.accessibilityPermission) { _, permission in
+      if permission == .available {
+        // ScrollEventSuppressor's CGEventTap (created from switcherCoordinator.start() at launch)
+        // silently fails to create its tap if the process was not yet Accessibility-trusted at
+        // that moment -- which, now that trust is requested asynchronously at launch (see
+        // AppState.init()), is the common case on a first run. start() no-ops once the tap
+        // already exists, so retrying here is exactly the same "start once trust exists" pattern
+        // keyboardMonitor already uses below for Input Monitoring.
+        switcherCoordinator.start()
       }
     }
     .onChange(of: state.inputMonitoringPermission) { _, permission in
@@ -142,6 +184,10 @@ final class KeyboardEventMonitor {
   private var router = KeyboardCommandRouter()
   private var permission: (() -> AccessibilityPermissionState)?
   private var perform: ((LayoutCommand) -> Void)?
+  private var rightOptionIsPressed = false
+
+  var onEscape: (() -> Void)?
+  var rightOptionDidChange: ((Bool) -> Void)?
 
   func start(
     permission: @escaping () -> AccessibilityPermissionState,
@@ -192,6 +238,16 @@ final class KeyboardEventMonitor {
       }
       return Unmanaged.passUnretained(event)
     }
+
+    let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+    if type == .flagsChanged, keyCode == 61 {
+      monitor.rightOptionIsPressed.toggle()
+      monitor.rightOptionDidChange?(monitor.rightOptionIsPressed)
+    }
+    if type == .keyDown, keyCode == 53 {
+      monitor.onEscape?()
+    }
+
     guard let input = input(from: type, event: event),
       let permission = monitor.permission,
       let perform = monitor.perform

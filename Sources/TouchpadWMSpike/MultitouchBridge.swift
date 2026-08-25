@@ -6,14 +6,16 @@ struct RawTouchSample: Equatable {
   let y: Float
 }
 
-final class MultitouchBridge {
+public final class MultitouchBridge {
   private let manager = OMSManager.shared
 
-  func start() -> Bool {
+  public init() {}
+
+  public func start() -> Bool {
     manager.startListening()
   }
 
-  func frames() -> AsyncStream<TouchFrame> {
+  public func frames() -> AsyncStream<TouchFrame> {
     AsyncStream { continuation in
       let task = Task { [manager] in
         defer { continuation.finish() }
@@ -35,7 +37,7 @@ final class MultitouchBridge {
     }
   }
 
-  func stop() {
+  public func stop() {
     manager.stopListening()
   }
 

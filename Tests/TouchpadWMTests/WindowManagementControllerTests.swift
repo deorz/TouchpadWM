@@ -66,6 +66,52 @@ final class WindowManagementControllerTests: XCTestCase {
     XCTAssertEqual(state.windowManagementStatus, "Accessibility access is required.")
   }
 
+  func testActivatingAKnownWindowRecordsItAndActivatingAnUnknownWindowFails() {
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+
+    XCTAssertTrue(service.activate(focusedNormalWindow.id))
+    XCTAssertEqual(service.activatedIDs, [focusedNormalWindow.id])
+    XCTAssertFalse(service.activate(WindowID(processIdentifier: 999, windowNumber: 999)))
+  }
+
+  func testRefreshedWindowsForSwitcherReturnsMRUOrderWithTheFocusedWindowFirst() {
+    let service = InMemoryWindowService(
+      windows: [unrelatedNormalWindow, focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let controller = WindowManagementController(service: service)
+
+    let windows = controller.refreshedWindowsForSwitcher()
+
+    XCTAssertEqual(windows.map(\.id), [focusedNormalWindow.id, unrelatedNormalWindow.id])
+  }
+
+  func testActivatingAWindowReordersASubsequentSwitcherRefresh() {
+    // Mirrors the real production sequence (SwitcherController.activateSelection, Task 5):
+    // activate() first (which, on the real AX service, changes what the live focused window
+    // is), then markWindowFocused() to update the catalogue's MRU to match. Per the design
+    // spec, MRU order updates only at switcher open and activation — the next open re-derives
+    // focus from the live service, so this is what a subsequent refresh should reflect.
+    let service = InMemoryWindowService(
+      windows: [unrelatedNormalWindow, focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let controller = WindowManagementController(service: service)
+    _ = controller.refreshedWindowsForSwitcher()
+
+    XCTAssertTrue(controller.activate(unrelatedNormalWindow.id))
+    controller.markWindowFocused(unrelatedNormalWindow.id)
+    let windows = controller.refreshedWindowsForSwitcher()
+
+    XCTAssertEqual(windows.first?.id, unrelatedNormalWindow.id)
+  }
+
+  func testControllerActivateDelegatesToTheService() {
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let controller = WindowManagementController(service: service)
+
+    XCTAssertTrue(controller.activate(focusedNormalWindow.id))
+    XCTAssertEqual(service.activatedIDs, [focusedNormalWindow.id])
+  }
+
   private var focusedNormalWindow: CataloguedWindow {
     window(id: 1, role: .normal)
   }
@@ -105,9 +151,10 @@ private final class RecordingWindowManager: WindowManaging {
 
 private final class InMemoryWindowService: AccessibilityWindowServicing {
   let windows: [CataloguedWindow]
-  let focusedID: WindowID?
+  private(set) var focusedID: WindowID?
   let acceptsMutations: Bool
   private(set) var appliedFrames: [WindowID: CGRect] = [:]
+  private(set) var activatedIDs: [WindowID] = []
 
   init(windows: [CataloguedWindow], focusedID: WindowID?, acceptsMutations: Bool = true) {
     self.windows = windows
@@ -128,6 +175,15 @@ private final class InMemoryWindowService: AccessibilityWindowServicing {
       return false
     }
     appliedFrames[id] = frame
+    return true
+  }
+
+  func activate(_ id: WindowID) -> Bool {
+    guard windows.contains(where: { $0.id == id }) else {
+      return false
+    }
+    activatedIDs.append(id)
+    focusedID = id
     return true
   }
 }

@@ -1,9 +1,19 @@
-struct TouchContact: Equatable, Sendable {
-  let id: Int32
-  let x: Float
-  let y: Float
+public struct TouchContact: Equatable, Sendable {
+  public let id: Int32
+  public let x: Float
+  public let y: Float
+
+  public init(id: Int32, x: Float, y: Float) {
+    self.id = id
+    self.x = x
+    self.y = y
+  }
 }
 
-struct TouchFrame: Sendable {
-  let contacts: [TouchContact]
+public struct TouchFrame: Sendable {
+  public let contacts: [TouchContact]
+
+  public init(contacts: [TouchContact]) {
+    self.contacts = contacts
+  }
 }
