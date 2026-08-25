@@ -106,7 +106,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
       AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
       == .success
     if let application = NSRunningApplication(processIdentifier: id.processIdentifier) {
-      application.activate(options: [.activateIgnoringOtherApps])
+      application.activate()
     }
     return raised && focused
   }
