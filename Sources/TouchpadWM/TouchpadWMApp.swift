@@ -4,11 +4,21 @@ import SwiftUI
 @main
 struct TouchpadWMApp: App {
   @Environment(\.scenePhase) private var scenePhase
-  @State private var state = AppState()
+  @State private var state: AppState
   @State private var keyboardMonitor = KeyboardEventMonitor()
+  @State private var overlay = SwitcherOverlayPanelController()
+  @State private var switcherCoordinator: SwitcherGestureCoordinator
 
   init() {
     NSApplication.shared.setActivationPolicy(.accessory)
+    let windowManagement = WindowManagementController(service: AccessibilityWindowService())
+    let overlay = SwitcherOverlayPanelController()
+    let switcherController = SwitcherController(windowManaging: windowManagement)
+    _state = State(initialValue: AppState(windowManagement: windowManagement))
+    _overlay = State(initialValue: overlay)
+    _switcherCoordinator = State(
+      initialValue: SwitcherGestureCoordinator(
+        switcherController: switcherController, overlay: overlay))
   }
 
   var body: some Scene {
@@ -19,9 +29,15 @@ struct TouchpadWMApp: App {
       SettingsView(state: state)
     }
     .onChange(of: scenePhase) { _, phase in
-      if phase == .active {
-        state.refreshAccessibilityPermission()
+      guard phase == .active else {
+        return
       }
+      state.refreshAccessibilityPermission()
+      keyboardMonitor.onEscape = { switcherCoordinator.cancelOpenSession() }
+      keyboardMonitor.rightOptionDidChange = { isPressed in
+        switcherCoordinator.isRightOptionPressed = isPressed
+      }
+      switcherCoordinator.start()
     }
     .onChange(of: state.inputMonitoringPermission) { _, permission in
       if permission == .available {
@@ -142,6 +158,10 @@ final class KeyboardEventMonitor {
   private var router = KeyboardCommandRouter()
   private var permission: (() -> AccessibilityPermissionState)?
   private var perform: ((LayoutCommand) -> Void)?
+  private var rightOptionIsPressed = false
+
+  var onEscape: (() -> Void)?
+  var rightOptionDidChange: ((Bool) -> Void)?
 
   func start(
     permission: @escaping () -> AccessibilityPermissionState,
@@ -192,6 +212,16 @@ final class KeyboardEventMonitor {
       }
       return Unmanaged.passUnretained(event)
     }
+
+    let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+    if type == .flagsChanged, keyCode == 61 {
+      monitor.rightOptionIsPressed.toggle()
+      monitor.rightOptionDidChange?(monitor.rightOptionIsPressed)
+    }
+    if type == .keyDown, keyCode == 53 {
+      monitor.onEscape?()
+    }
+
     guard let input = input(from: type, event: event),
       let permission = monitor.permission,
       let perform = monitor.perform
