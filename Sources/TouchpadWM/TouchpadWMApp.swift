@@ -54,6 +54,17 @@ struct TouchpadWMApp: App {
       }
       state.refreshAccessibilityPermission()
     }
+    .onChange(of: state.accessibilityPermission) { _, permission in
+      if permission == .available {
+        // ScrollEventSuppressor's CGEventTap (created from switcherCoordinator.start() at launch)
+        // silently fails to create its tap if the process was not yet Accessibility-trusted at
+        // that moment -- which, now that trust is requested asynchronously at launch (see
+        // AppState.init()), is the common case on a first run. start() no-ops once the tap
+        // already exists, so retrying here is exactly the same "start once trust exists" pattern
+        // keyboardMonitor already uses below for Input Monitoring.
+        switcherCoordinator.start()
+      }
+    }
     .onChange(of: state.inputMonitoringPermission) { _, permission in
       if permission == .available {
         keyboardMonitor.start(
