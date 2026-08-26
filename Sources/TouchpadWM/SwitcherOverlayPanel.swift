@@ -52,33 +52,49 @@ private struct SwitcherOverlayView: View {
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        VStack(spacing: 4) {
-          ForEach(Array(session.windows.enumerated()).reversed(), id: \.element.id) {
-            index, window in
-            SwitcherOverlayRow(
-              presentation: WindowPickerRowPresentation(window: window),
-              isSelected: index == session.selectedIndex,
-              icon: iconCache.icon(forBundleIdentifier: window.bundleIdentifier)
-            )
-            .id(index)
+        VStack(spacing: 0) {
+          Color.clear
+            .frame(height: SwitcherOverlayGeometry.verticalContentPadding)
+
+          VStack(spacing: SwitcherOverlayGeometry.rowSpacing) {
+            ForEach(Array(session.windows.enumerated()).reversed(), id: \.element.id) {
+              index, window in
+              SwitcherOverlayRow(
+                presentation: WindowPickerRowPresentation(window: window),
+                isSelected: index == session.selectedIndex,
+                icon: iconCache.icon(forBundleIdentifier: window.bundleIdentifier)
+              )
+              .id(index)
+            }
           }
+          .padding(.horizontal, 12)
+
+          Color.clear
+            .frame(height: SwitcherOverlayGeometry.verticalContentPadding)
+            .id(PickerScrollAnchor.bottomPadding)
         }
-        .padding(12)
       }
       .scrollIndicators(.hidden)
       .onAppear {
-        proxy.scrollTo(session.selectedIndex, anchor: .bottom)
+        proxy.scrollTo(PickerScrollAnchor.bottomPadding, anchor: .bottom)
       }
       .onChange(of: session.selectedIndex) { _, selectedIndex in
         withAnimation(.easeOut(duration: 0.15)) {
-          proxy.scrollTo(selectedIndex, anchor: .center)
+          if selectedIndex == 0 {
+            proxy.scrollTo(PickerScrollAnchor.bottomPadding, anchor: .bottom)
+          } else {
+            proxy.scrollTo(selectedIndex, anchor: .center)
+          }
         }
       }
     }
     .background(.regularMaterial)
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
   }
+}
+
+private enum PickerScrollAnchor {
+  static let bottomPadding = "bottom-padding"
 }
 
 private struct SwitcherOverlayRow: View {

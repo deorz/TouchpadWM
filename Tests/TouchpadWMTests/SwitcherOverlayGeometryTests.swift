@@ -4,16 +4,29 @@ import XCTest
 @testable import TouchpadWM
 
 final class SwitcherOverlayGeometryTests: XCTestCase {
+  func testPanelChromeReservesEqualTopAndBottomContentPadding() {
+    XCTAssertEqual(SwitcherOverlayGeometry.verticalContentPadding, 12)
+    XCTAssertEqual(
+      SwitcherOverlayGeometry.verticalChrome,
+      SwitcherOverlayGeometry.verticalContentPadding * 2)
+  }
+
   func testPanelSizeUsesOneCompactRowForASingleWindow() {
     XCTAssertEqual(
       SwitcherOverlayGeometry.panelSize(forWindowCount: 1),
       CGSize(width: 360, height: 80))
   }
 
+  func testPanelSizeIncludesGapsBetweenRows() {
+    XCTAssertEqual(
+      SwitcherOverlayGeometry.panelSize(forWindowCount: 3),
+      CGSize(width: 360, height: 200))
+  }
+
   func testPanelSizeCapsItsHeightAtFiveVisibleRows() {
     XCTAssertEqual(
       SwitcherOverlayGeometry.panelSize(forWindowCount: 9),
-      CGSize(width: 360, height: 304))
+      CGSize(width: 360, height: 320))
   }
 
   func testOriginCentersThePanelWithinTheScreenFrame() {
@@ -33,6 +46,6 @@ final class SwitcherOverlayGeometryTests: XCTestCase {
     let origin = SwitcherOverlayGeometry.origin(
       forPanelSize: panelSize, centeredIn: screenFrame)
 
-    XCTAssertEqual(origin, CGPoint(x: 420, y: 298))
+    XCTAssertEqual(origin, CGPoint(x: 420, y: 290))
   }
 }
