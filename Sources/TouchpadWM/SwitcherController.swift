@@ -13,14 +13,14 @@ struct SwitcherSession: Equatable {
 /// when needed" in the V1 design.
 final class SwitcherController {
   private(set) var session: SwitcherSession?
-  private let windowManaging: any SwitcherWindowManaging
+  private let windowSource: any SwitcherWindowSourcing
 
-  init(windowManaging: any SwitcherWindowManaging) {
-    self.windowManaging = windowManaging
+  init(windowSource: any SwitcherWindowSourcing) {
+    self.windowSource = windowSource
   }
 
   func open() {
-    let windows = windowManaging.refreshedWindowsForSwitcher()
+    let windows = windowSource.refreshedWindowsForSwitcher()
     session = windows.isEmpty ? nil : SwitcherSession(windows: windows, selectedIndex: 0)
   }
 
@@ -43,10 +43,10 @@ final class SwitcherController {
     guard let selected = session?.selectedWindow else {
       return false
     }
-    guard windowManaging.activate(selected.id) else {
+    guard windowSource.activate(selected.id) else {
       return false
     }
-    windowManaging.markWindowFocused(selected.id)
+    windowSource.markWindowFocused(selected.id)
     return true
   }
 

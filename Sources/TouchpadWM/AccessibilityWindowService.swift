@@ -17,11 +17,9 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
 
   func refreshWindows() -> [CataloguedWindow] {
     // No .optionOnScreenOnly: that flag excludes windows on other Spaces entirely, which would
-    // make them unreachable from the switcher (the switcher and layout share this one catalogue
-    // source — see WindowManagementController). Cross-Space/display activation is expected to
-    // work per the design spec ("delegated to the existing Accessibility window activation
-    // path"), so enumeration must surface those windows for AccessibilityWindowService.activate
-    // to have anything to act on.
+    // make them unreachable from the picker. Cross-Space/display activation is expected to work,
+    // so enumeration must surface those windows for AccessibilityWindowService.activate to have
+    // anything to act on.
     let metadata =
       CGWindowListCopyWindowInfo([.excludeDesktopElements], kCGNullWindowID)
       as? [[String: Any]] ?? []
@@ -49,6 +47,14 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
         else {
           continue
         }
+        guard
+          PickerWindowEligibility.shouldInclude(
+            bundleIdentifier: application.bundleIdentifier,
+            windowLayer: candidate.layer,
+            frame: candidate.frame)
+        else {
+          continue
+        }
         let id = WindowID(
           processIdentifier: application.processIdentifier, windowNumber: windowNumber)
         refreshedElements[id] = axWindow
@@ -56,6 +62,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
           CataloguedWindow(
             id: id,
             bundleIdentifier: application.bundleIdentifier ?? "",
+            applicationName: application.localizedName ?? application.bundleIdentifier ?? "",
             title: (attributeValue(kAXTitleAttribute as CFString, of: axWindow) as? String) ?? "",
             role: role(of: axWindow),
             isMinimized: (attributeValue(kAXMinimizedAttribute as CFString, of: axWindow) as? Bool)
@@ -87,22 +94,6 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     return elements.first(where: { CFEqual($0.value, focusedWindow) })?.key
   }
 
-  func apply(_ frame: CGRect, to id: WindowID) -> Bool {
-    guard let element = elements[id] else {
-      return false
-    }
-    var origin = frame.origin
-    var size = frame.size
-    guard let position = AXValueCreate(.cgPoint, &origin),
-      let dimensions = AXValueCreate(.cgSize, &size)
-    else {
-      return false
-    }
-    return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, position)
-      == .success
-      && AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, dimensions) == .success
-  }
-
   func activate(_ id: WindowID) -> Bool {
     guard let element = elements[id] else {
       return false
@@ -120,6 +111,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private func candidate(from metadata: [String: Any], processIdentifier: pid_t) -> Candidate? {
     guard (metadata[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == processIdentifier,
       let windowNumber = metadata[kCGWindowNumber as String] as? NSNumber,
+      let layer = metadata[kCGWindowLayer as String] as? NSNumber,
       let rawBounds = metadata[kCGWindowBounds as String]
     else {
       return nil
@@ -128,7 +120,10 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     guard let frame = CGRect(dictionaryRepresentation: bounds) else {
       return nil
     }
-    return Candidate(windowNumber: CGWindowID(windowNumber.uint32Value), frame: frame)
+    return Candidate(
+      windowNumber: CGWindowID(windowNumber.uint32Value),
+      layer: layer.intValue,
+      frame: frame)
   }
 
   private func attributeValue(_ attribute: CFString, of element: AXUIElement) -> CFTypeRef? {
@@ -168,5 +163,6 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
 
 private struct Candidate {
   let windowNumber: CGWindowID
+  let layer: Int
   let frame: CGRect
 }

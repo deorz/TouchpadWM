@@ -3,23 +3,31 @@ import XCTest
 @testable import TouchpadWM
 
 final class AppRuleStoreTests: XCTestCase {
-  func testMissingRuleDefaultsToBothFeaturesIncluded() {
+  func testMissingRuleDefaultsToPickerInclusion() {
     let defaults = makeDefaults()
     let store = UserDefaultsAppRuleStore(defaults: defaults)
 
     XCTAssertEqual(store.rule(for: "com.example.editor"), .included)
   }
 
-  func testRulePersistsAcrossStoreInstancesAndKeepsFlagsIndependent() {
+  func testRulePersistsAcrossStoreInstances() {
     let defaults = makeDefaults()
     let first = UserDefaultsAppRuleStore(defaults: defaults)
-    first.setRule(
-      .init(includeInSwitcher: false, manageLayout: true), for: "com.example.editor")
+    first.setRule(.init(includeInSwitcher: false), for: "com.example.editor")
 
     let second = UserDefaultsAppRuleStore(defaults: defaults)
-    XCTAssertEqual(
-      second.rule(for: "com.example.editor"),
-      .init(includeInSwitcher: false, manageLayout: true))
+    XCTAssertEqual(second.rule(for: "com.example.editor"), .init(includeInSwitcher: false))
+  }
+
+  func testLegacyTwoFieldPayloadDecodesAsPickerRule() throws {
+    let defaults = makeDefaults()
+    let payload = """
+      {"com.example.editor":{"includeInSwitcher":false,"manageLayout":true}}
+      """.data(using: .utf8)!
+    defaults.set(payload, forKey: "appRules")
+    let store = UserDefaultsAppRuleStore(defaults: defaults)
+
+    XCTAssertEqual(store.rule(for: "com.example.editor"), .init(includeInSwitcher: false))
   }
 
   private func makeDefaults() -> UserDefaults {

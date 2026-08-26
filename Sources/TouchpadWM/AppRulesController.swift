@@ -4,16 +4,16 @@ import Observation
 @Observable
 final class AppRulesController {
   private let inventory: any ApplicationInventorying
-  private let windowManagement: any AppRuleManaging
+  private let windowPicker: any AppRuleManaging
   private(set) var applications: [InstalledApplication] = []
   private var rules: [String: AppRule] = [:]
 
   init(
     inventory: any ApplicationInventorying = ApplicationInventory(),
-    windowManagement: any AppRuleManaging
+    windowPicker: any AppRuleManaging
   ) {
     self.inventory = inventory
-    self.windowManagement = windowManagement
+    self.windowPicker = windowPicker
   }
 
   func refresh() {
@@ -31,11 +31,11 @@ final class AppRulesController {
   }
 
   func rule(for bundleIdentifier: String) -> AppRule {
-    rules[bundleIdentifier] ?? windowManagement.rule(for: bundleIdentifier)
+    rules[bundleIdentifier] ?? windowPicker.rule(for: bundleIdentifier)
   }
 
   func setRule(_ rule: AppRule, for bundleIdentifier: String) {
     rules[bundleIdentifier] = rule
-    windowManagement.setRule(rule, for: bundleIdentifier)
+    windowPicker.setRule(rule, for: bundleIdentifier)
   }
 }
