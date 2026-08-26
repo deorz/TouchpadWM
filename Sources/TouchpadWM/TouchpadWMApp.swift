@@ -153,53 +153,49 @@ private struct SettingsView: View {
   @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
-    ScrollView {
-      Form {
-        Section("Accessibility") {
-          Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
-          Text("Window-management commands require Accessibility access.")
-          Button("Open Accessibility Settings") {
-            state.openAccessibilitySettings()
-          }
-          Button("Refresh Accessibility Status") {
-            state.refreshAccessibilityPermission()
+    List {
+      Section("Accessibility") {
+        Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
+        Text("Window-management commands require Accessibility access.")
+        Button("Open Accessibility Settings") {
+          state.openAccessibilitySettings()
+        }
+        Button("Refresh Accessibility Status") {
+          state.refreshAccessibilityPermission()
+        }
+      }
+      Section("Input Monitoring") {
+        Text(
+          state.inputMonitoringPermission == .available
+            ? "Access granted" : "Keyboard shortcuts require access.")
+        Button("Enable Input Monitoring") {
+          NSApp.activate(ignoringOtherApps: true)
+          DispatchQueue.main.async {
+            state.requestInputMonitoringAccess()
           }
         }
-        Section("Input Monitoring") {
-          Text(
-            state.inputMonitoringPermission == .available
-              ? "Access granted" : "Keyboard shortcuts require access.")
-          Button("Enable Input Monitoring") {
-            NSApp.activate(ignoringOtherApps: true)
-            DispatchQueue.main.async {
-              state.requestInputMonitoringAccess()
-            }
-          }
-        }
-        Section("App Rules") {
-          TextField("Search applications", text: $appSearch)
-          ForEach(appRules.applications(matching: appSearch)) { application in
-            HStack(alignment: .top) {
-              Image(nsImage: iconCache.icon(for: application))
-                .resizable()
-                .frame(width: 32, height: 32)
-              VStack(alignment: .leading) {
-                Text(application.name)
-                Text(application.bundleIdentifier)
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-                Toggle("Include in Switcher", isOn: switcherBinding(for: application))
-                Toggle("Manage Layout", isOn: layoutBinding(for: application))
-              }
+      }
+      Section("App Rules") {
+        TextField("Search applications", text: $appSearch)
+        ForEach(appRules.applications(matching: appSearch)) { application in
+          HStack(alignment: .top) {
+            Image(nsImage: iconCache.icon(for: application))
+              .resizable()
+              .frame(width: 32, height: 32)
+            VStack(alignment: .leading) {
+              Text(application.name)
+              Text(application.bundleIdentifier)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+              Toggle("Include in Switcher", isOn: switcherBinding(for: application))
+              Toggle("Manage Layout", isOn: layoutBinding(for: application))
             }
           }
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(8)
     }
     .frame(width: 420, height: 600)
-    .padding()
+    .contentMargins(8, for: .scrollContent)
     .onAppear {
       appRules.refresh()
     }
