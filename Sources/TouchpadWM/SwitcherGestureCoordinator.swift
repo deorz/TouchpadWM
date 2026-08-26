@@ -1,3 +1,4 @@
+import AppKit
 import TouchpadWMSpike
 
 /// Wires the trackpad bridge to the switcher: consumes raw frames, translates them via
@@ -8,6 +9,7 @@ final class SwitcherGestureCoordinator {
   private let overlay: SwitcherOverlayPanelController
   private let bridge: MultitouchBridge
   private let scrollSuppressor: ScrollEventSuppressor
+  private let haptics: HapticFeedbackPerformer
   private var recognizer = SwitcherGestureRecognizer()
   private var listenTask: Task<Void, Never>?
 
@@ -15,12 +17,14 @@ final class SwitcherGestureCoordinator {
     switcherController: SwitcherController,
     overlay: SwitcherOverlayPanelController,
     bridge: MultitouchBridge = MultitouchBridge(),
-    scrollSuppressor: ScrollEventSuppressor = ScrollEventSuppressor()
+    scrollSuppressor: ScrollEventSuppressor = ScrollEventSuppressor(),
+    haptics: HapticFeedbackPerformer = HapticFeedbackPerformer()
   ) {
     self.switcherController = switcherController
     self.overlay = overlay
     self.bridge = bridge
     self.scrollSuppressor = scrollSuppressor
+    self.haptics = haptics
   }
 
   func start() {
@@ -42,6 +46,7 @@ final class SwitcherGestureCoordinator {
   }
 
   private func handle(_ command: SwitcherGestureCommand) {
+    haptics.perform(SwitcherHapticPolicy.feedback(for: command))
     switch command {
     case .openSwitcher:
       switcherController.open()
@@ -71,5 +76,21 @@ final class SwitcherGestureCoordinator {
   /// stays off when no eligible windows exist and ends when activation closes the session.
   private func syncScrollSuppression() {
     scrollSuppressor.isSuppressing = switcherController.session != nil
+  }
+}
+
+/// Thin wrapper over `NSHapticFeedbackManager`, the system's trackpad haptic API. Isolated here
+/// so `SwitcherGestureCoordinator` stays the only place that touches it, mirroring how this file
+/// already isolates the bridge and scroll-suppression adapters.
+struct HapticFeedbackPerformer {
+  func perform(_ feedback: SwitcherHapticFeedback) {
+    let pattern: NSHapticFeedbackManager.FeedbackPattern
+    switch feedback {
+    case .alignment:
+      pattern = .alignment
+    case .generic:
+      pattern = .generic
+    }
+    NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .default)
   }
 }
