@@ -68,9 +68,6 @@ struct WindowCatalogue {
   }
 
   private func rule(for window: CataloguedWindow) -> AppRule {
-    if window.bundleIdentifier == "com.apple.finder" {
-      return .excluded
-    }
-    return rules[window.bundleIdentifier] ?? .included
+    rules[window.bundleIdentifier] ?? .included
   }
 }

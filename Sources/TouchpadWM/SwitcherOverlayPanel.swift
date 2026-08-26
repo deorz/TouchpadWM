@@ -36,6 +36,7 @@ final class SwitcherOverlayPanelController {
       defer: false)
     panel.level = .floating
     panel.isFloatingPanel = true
+    panel.hasShadow = false
     panel.hidesOnDeactivate = false
     panel.isOpaque = false
     panel.backgroundColor = .clear

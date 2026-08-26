@@ -9,7 +9,7 @@ final class ApplicationInventoryTests: XCTestCase {
     try makeApp(at: root.appending(path: "Zulu.app"), bundleIdentifier: "zulu", name: "Zulu")
     try makeApp(
       at: root.appending(path: "Nested/Alpha.app"), bundleIdentifier: "alpha", name: "Alpha")
-    let inventory = ApplicationInventory(roots: [root])
+    let inventory = ApplicationInventory(roots: [root], additionalApplicationURLs: [])
 
     XCTAssertEqual(inventory.installedApplications().map(\.name), ["Alpha", "Zulu"])
   }
@@ -24,10 +24,23 @@ final class ApplicationInventoryTests: XCTestCase {
     try makeApp(at: second.appending(path: "Other.app"), bundleIdentifier: "editor", name: "Other")
     try makeApp(at: second.appending(path: "Broken.app"), bundleIdentifier: nil, name: "Broken")
 
-    let applications = ApplicationInventory(roots: [second, first]).installedApplications()
+    let applications = ApplicationInventory(
+      roots: [second, first], additionalApplicationURLs: []
+    ).installedApplications()
 
     XCTAssertEqual(applications.map(\.bundleIdentifier), ["editor"])
     XCTAssertEqual(applications.first?.url.lastPathComponent, "Editor.app")
+  }
+
+  func testInventoryIncludesAnExplicitAdditionalApplication() throws {
+    let root = try makeTemporaryDirectory()
+    let finder = root.appending(path: "Finder.app")
+    try makeApp(at: finder, bundleIdentifier: "com.apple.finder", name: "Finder")
+    let inventory = ApplicationInventory(roots: [], additionalApplicationURLs: [finder])
+
+    XCTAssertEqual(
+      inventory.installedApplications(),
+      [InstalledApplication(bundleIdentifier: "com.apple.finder", name: "Finder", url: finder)])
   }
 
   private func makeTemporaryDirectory() throws -> URL {

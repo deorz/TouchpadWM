@@ -47,6 +47,14 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
         else {
           continue
         }
+        guard
+          PickerWindowEligibility.shouldInclude(
+            bundleIdentifier: application.bundleIdentifier,
+            windowLayer: candidate.layer,
+            frame: candidate.frame)
+        else {
+          continue
+        }
         let id = WindowID(
           processIdentifier: application.processIdentifier, windowNumber: windowNumber)
         refreshedElements[id] = axWindow
@@ -103,6 +111,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private func candidate(from metadata: [String: Any], processIdentifier: pid_t) -> Candidate? {
     guard (metadata[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == processIdentifier,
       let windowNumber = metadata[kCGWindowNumber as String] as? NSNumber,
+      let layer = metadata[kCGWindowLayer as String] as? NSNumber,
       let rawBounds = metadata[kCGWindowBounds as String]
     else {
       return nil
@@ -111,7 +120,10 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     guard let frame = CGRect(dictionaryRepresentation: bounds) else {
       return nil
     }
-    return Candidate(windowNumber: CGWindowID(windowNumber.uint32Value), frame: frame)
+    return Candidate(
+      windowNumber: CGWindowID(windowNumber.uint32Value),
+      layer: layer.intValue,
+      frame: frame)
   }
 
   private func attributeValue(_ attribute: CFString, of element: AXUIElement) -> CFTypeRef? {
@@ -151,5 +163,6 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
 
 private struct Candidate {
   let windowNumber: CGWindowID
+  let layer: Int
   let frame: CGRect
 }

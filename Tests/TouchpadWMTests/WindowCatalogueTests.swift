@@ -4,12 +4,12 @@ import XCTest
 @testable import TouchpadWM
 
 final class WindowCatalogueTests: XCTestCase {
-  func testFinderIsExcludedFromPickerRegardlessOfStoredRule() {
+  func testFinderCanBeIncludedInPicker() {
     var catalogue = WindowCatalogue()
     catalogue.replaceWindows([finderWindow, editorWindow])
     catalogue.setRule(.included, for: finderWindow.bundleIdentifier)
 
-    XCTAssertEqual(catalogue.windowsForSwitcher.map(\.id), [editorWindow.id])
+    XCTAssertEqual(catalogue.windowsForSwitcher.map(\.id), [finderWindow.id, editorWindow.id])
   }
 
   func testPickerIncludesAllWindowRoles() {
