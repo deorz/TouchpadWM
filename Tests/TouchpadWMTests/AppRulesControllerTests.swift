@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import XCTest
 
 @testable import TouchpadWM
@@ -20,6 +21,23 @@ final class AppRulesControllerTests: XCTestCase {
   }
 
   @MainActor
+  func testSettingARuleInvalidatesAnObservedRule() {
+    let controller = AppRulesController(
+      inventory: FixedInventory([]), windowManagement: FakeAppRuleManager())
+    let observation = ObservationChangeRecorder()
+
+    withObservationTracking {
+      _ = controller.rule(for: "com.example.editor")
+    } onChange: {
+      observation.recordChange()
+    }
+
+    controller.setRule(.excluded, for: "com.example.editor")
+
+    XCTAssertTrue(observation.didObserveChange)
+  }
+
+  @MainActor
   func testSettingARuleDelegatesTheIndependentFlagsToWindowManagement() {
     let manager = FakeAppRuleManager()
     let controller = AppRulesController(inventory: FixedInventory([]), windowManagement: manager)
@@ -28,6 +46,19 @@ final class AppRulesControllerTests: XCTestCase {
     controller.setRule(rule, for: "com.example.editor")
 
     XCTAssertEqual(manager.rules["com.example.editor"], rule)
+  }
+}
+
+private final class ObservationChangeRecorder: @unchecked Sendable {
+  private let lock = NSLock()
+  private var changed = false
+
+  var didObserveChange: Bool {
+    lock.withLock { changed }
+  }
+
+  func recordChange() {
+    lock.withLock { changed = true }
   }
 }
 

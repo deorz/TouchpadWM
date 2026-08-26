@@ -150,50 +150,55 @@ private struct SettingsView: View {
   let state: AppState
   let appRules: AppRulesController
   @State private var appSearch = ""
+  @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
-    Form {
-      Section("Accessibility") {
-        Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
-        Text("Window-management commands require Accessibility access.")
-        Button("Open Accessibility Settings") {
-          state.openAccessibilitySettings()
-        }
-        Button("Refresh Accessibility Status") {
-          state.refreshAccessibilityPermission()
-        }
-      }
-      Section("Input Monitoring") {
-        Text(
-          state.inputMonitoringPermission == .available
-            ? "Access granted" : "Keyboard shortcuts require access.")
-        Button("Enable Input Monitoring") {
-          NSApp.activate(ignoringOtherApps: true)
-          DispatchQueue.main.async {
-            state.requestInputMonitoringAccess()
+    ScrollView {
+      Form {
+        Section("Accessibility") {
+          Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
+          Text("Window-management commands require Accessibility access.")
+          Button("Open Accessibility Settings") {
+            state.openAccessibilitySettings()
+          }
+          Button("Refresh Accessibility Status") {
+            state.refreshAccessibilityPermission()
           }
         }
-      }
-      Section("App Rules") {
-        TextField("Search applications", text: $appSearch)
-        ForEach(appRules.applications(matching: appSearch)) { application in
-          HStack(alignment: .top) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: application.url.path))
-              .resizable()
-              .frame(width: 32, height: 32)
-            VStack(alignment: .leading) {
-              Text(application.name)
-              Text(application.bundleIdentifier)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-              Toggle("Include in Switcher", isOn: switcherBinding(for: application))
-              Toggle("Manage Layout", isOn: layoutBinding(for: application))
+        Section("Input Monitoring") {
+          Text(
+            state.inputMonitoringPermission == .available
+              ? "Access granted" : "Keyboard shortcuts require access.")
+          Button("Enable Input Monitoring") {
+            NSApp.activate(ignoringOtherApps: true)
+            DispatchQueue.main.async {
+              state.requestInputMonitoringAccess()
+            }
+          }
+        }
+        Section("App Rules") {
+          TextField("Search applications", text: $appSearch)
+          ForEach(appRules.applications(matching: appSearch)) { application in
+            HStack(alignment: .top) {
+              Image(nsImage: iconCache.icon(for: application))
+                .resizable()
+                .frame(width: 32, height: 32)
+              VStack(alignment: .leading) {
+                Text(application.name)
+                Text(application.bundleIdentifier)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                Toggle("Include in Switcher", isOn: switcherBinding(for: application))
+                Toggle("Manage Layout", isOn: layoutBinding(for: application))
+              }
             }
           }
         }
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(8)
     }
-    .frame(width: 360)
+    .frame(width: 420, height: 600)
     .padding()
     .onAppear {
       appRules.refresh()
