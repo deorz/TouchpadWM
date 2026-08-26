@@ -19,6 +19,7 @@ enum WindowRole: Equatable {
 struct CataloguedWindow: Equatable {
   let id: WindowID
   let bundleIdentifier: String
+  let applicationName: String
   let title: String
   let role: WindowRole
   let isMinimized: Bool
@@ -27,10 +28,9 @@ struct CataloguedWindow: Equatable {
 
 struct AppRule: Codable, Equatable {
   var includeInSwitcher: Bool
-  var manageLayout: Bool
 
-  static let included = AppRule(includeInSwitcher: true, manageLayout: true)
-  static let excluded = AppRule(includeInSwitcher: false, manageLayout: false)
+  static let included = AppRule(includeInSwitcher: true)
+  static let excluded = AppRule(includeInSwitcher: false)
 }
 
 struct WindowCatalogue {
@@ -40,14 +40,6 @@ struct WindowCatalogue {
 
   var windowsForSwitcher: [CataloguedWindow] {
     orderedWindows.filter { rule(for: $0).includeInSwitcher }
-  }
-
-  var managedWindows: [CataloguedWindow] {
-    orderedWindows.filter { window in
-      let rule = rule(for: window)
-      return rule.manageLayout && !window.isMinimized
-        && (window.role == .normal || window.role == .unknown)
-    }
   }
 
   mutating func replaceWindows(_ refreshedWindows: [CataloguedWindow]) {

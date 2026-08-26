@@ -17,21 +17,14 @@ final class InMemoryAppRuleStore: AppRuleStoring {
   }
 }
 
-final class PermissionSource: AccessibilityPermissionChecking, InputMonitoringPermissionChecking {
+final class PermissionSource: AccessibilityPermissionChecking {
   var trusted: Bool
-  var inputMonitoringAccess: Bool
   let opensSettings: Bool
   private(set) var isTrustedCallCount = 0
-  private(set) var inputMonitoringRequestCount = 0
   private(set) var requestTrustCallCount = 0
 
-  init(
-    isTrusted: Bool,
-    inputMonitoringAccess: Bool = false,
-    opensSettings: Bool = true
-  ) {
+  init(isTrusted: Bool, opensSettings: Bool = true) {
     trusted = isTrusted
-    self.inputMonitoringAccess = inputMonitoringAccess
     self.opensSettings = opensSettings
   }
 
@@ -48,12 +41,4 @@ final class PermissionSource: AccessibilityPermissionChecking, InputMonitoringPe
     requestTrustCallCount += 1
   }
 
-  func hasAccess() -> Bool {
-    inputMonitoringAccess
-  }
-
-  func requestAccess() -> Bool {
-    inputMonitoringRequestCount += 1
-    return inputMonitoringAccess
-  }
 }

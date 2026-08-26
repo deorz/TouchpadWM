@@ -5,8 +5,8 @@ import XCTest
 
 final class SwitcherControllerTests: XCTestCase {
   func testOpenWithNoEligibleWindowsProducesNoSession() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [])
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [])
+    let controller = SwitcherController(windowSource: windowSource)
 
     controller.open()
 
@@ -14,8 +14,8 @@ final class SwitcherControllerTests: XCTestCase {
   }
 
   func testOpenSnapshotsTheMRUOrderWithTheCurrentWindowSelected() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [windowA, windowB])
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [windowA, windowB])
+    let controller = SwitcherController(windowSource: windowSource)
 
     controller.open()
 
@@ -25,8 +25,8 @@ final class SwitcherControllerTests: XCTestCase {
   }
 
   func testMovingPreviousClampsAtTheOldestWindow() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [windowA, windowB])
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [windowA, windowB])
+    let controller = SwitcherController(windowSource: windowSource)
     controller.open()
 
     controller.moveSelection(.previous)
@@ -36,8 +36,8 @@ final class SwitcherControllerTests: XCTestCase {
   }
 
   func testMovingNextClampsAtTheCurrentWindow() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [windowA, windowB])
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [windowA, windowB])
+    let controller = SwitcherController(windowSource: windowSource)
     controller.open()
 
     controller.moveSelection(.next)
@@ -46,8 +46,8 @@ final class SwitcherControllerTests: XCTestCase {
   }
 
   func testActivatingTheSelectionMarksItFocusedAndClosesTheSession() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [windowA, windowB])
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [windowA, windowB])
+    let controller = SwitcherController(windowSource: windowSource)
     controller.open()
     controller.moveSelection(.previous)
 
@@ -59,8 +59,8 @@ final class SwitcherControllerTests: XCTestCase {
   }
 
   func testActivationFailureClosesTheSessionWithoutMarkingFocus() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [windowA], activationSucceeds: false)
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [windowA], activationSucceeds: false)
+    let controller = SwitcherController(windowSource: windowSource)
     controller.open()
 
     XCTAssertFalse(controller.activateSelection())
@@ -70,8 +70,8 @@ final class SwitcherControllerTests: XCTestCase {
   }
 
   func testCancelClosesTheSessionWithoutActivating() {
-    let windowSource = FakeSwitcherWindowManaging(windows: [windowA])
-    let controller = SwitcherController(windowManaging: windowSource)
+    let windowSource = FakeSwitcherWindowSourcing(windows: [windowA])
+    let controller = SwitcherController(windowSource: windowSource)
     controller.open()
 
     controller.cancel()
@@ -92,6 +92,7 @@ final class SwitcherControllerTests: XCTestCase {
     CataloguedWindow(
       id: WindowID(processIdentifier: 1, windowNumber: id),
       bundleIdentifier: "com.example.app",
+      applicationName: "Example App",
       title: "Window \(id)",
       role: .normal,
       isMinimized: false,
@@ -99,7 +100,7 @@ final class SwitcherControllerTests: XCTestCase {
   }
 }
 
-private final class FakeSwitcherWindowManaging: SwitcherWindowManaging {
+private final class FakeSwitcherWindowSourcing: SwitcherWindowSourcing {
   private let windows: [CataloguedWindow]
   private let activationSucceeds: Bool
   private(set) var activatedIDs: [WindowID] = []

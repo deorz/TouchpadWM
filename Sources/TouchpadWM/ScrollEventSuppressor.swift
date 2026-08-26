@@ -4,8 +4,7 @@ import CoreGraphics
 /// in progress. The private multitouch bridge only reads raw touch data; it has no relationship
 /// to, and cannot prevent, macOS's own parallel three-finger scroll recognition, which would
 /// otherwise also scroll the content of the window underneath while the switcher gesture is
-/// happening. This is an AppKit/CGEventTap boundary adapter, mirroring `KeyboardEventMonitor` in
-/// TouchpadWMApp.swift.
+/// happening. This is an AppKit/CGEventTap boundary adapter.
 ///
 /// Modeled on AltTab's `ScrollwheelEvents` (github.com/lwouis/alt-tab-macos): the tap is created
 /// once and left disabled until needed, toggled purely through `CGEvent.tapEnable` rather than a

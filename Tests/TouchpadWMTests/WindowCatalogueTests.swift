@@ -4,38 +4,44 @@ import XCTest
 @testable import TouchpadWM
 
 final class WindowCatalogueTests: XCTestCase {
-  func testFinderIsExcludedFromBothCollectionsByDefault() {
+  func testFinderIsExcludedFromPickerRegardlessOfStoredRule() {
     var catalogue = WindowCatalogue()
     catalogue.replaceWindows([finderWindow, editorWindow])
+    catalogue.setRule(.included, for: finderWindow.bundleIdentifier)
 
     XCTAssertEqual(catalogue.windowsForSwitcher.map(\.id), [editorWindow.id])
-    XCTAssertEqual(catalogue.managedWindows.map(\.id), [editorWindow.id])
   }
 
-  func testUtilityAndSheetWindowsRemainSwitchableButAreNotManaged() {
+  func testPickerIncludesAllWindowRoles() {
     var catalogue = WindowCatalogue()
-    catalogue.replaceWindows([normalWindow, utilityWindow, sheetWindow])
+    catalogue.replaceWindows([normalWindow, utilityWindow, sheetWindow, unknownRoleWindow])
 
     XCTAssertEqual(
-      catalogue.windowsForSwitcher.map(\.id), [normalWindow.id, utilityWindow.id, sheetWindow.id])
-    XCTAssertEqual(catalogue.managedWindows.map(\.id), [normalWindow.id])
+      catalogue.windowsForSwitcher.map(\.id),
+      [normalWindow.id, utilityWindow.id, sheetWindow.id, unknownRoleWindow.id])
   }
 
-  func testUnknownRoleWindowsRemainManaged() {
+  func testPickerExclusionHidesOnlyTheExcludedApplication() {
     var catalogue = WindowCatalogue()
-    catalogue.replaceWindows([unknownRoleWindow])
+    catalogue.replaceWindows([editorWindow, normalWindow])
+    catalogue.setRule(.init(includeInSwitcher: false), for: editorWindow.bundleIdentifier)
 
-    XCTAssertEqual(catalogue.managedWindows.map(\.id), [unknownRoleWindow.id])
+    XCTAssertEqual(catalogue.windowsForSwitcher.map(\.id), [normalWindow.id])
   }
 
-  func testAppRulesFilterSwitcherAndLayoutIndependently() {
+  func testPickerPreservesApplicationNameForPresentation() {
+    let window = CataloguedWindow(
+      id: WindowID(processIdentifier: 1, windowNumber: 20),
+      bundleIdentifier: "com.example.editor",
+      applicationName: "Editor",
+      title: "Document",
+      role: .normal,
+      isMinimized: false,
+      visibleFrame: CGRect(x: 0, y: 0, width: 1000, height: 800))
     var catalogue = WindowCatalogue()
-    catalogue.replaceWindows([editorWindow])
-    catalogue.setRule(
-      .init(includeInSwitcher: false, manageLayout: true), for: editorWindow.bundleIdentifier)
+    catalogue.replaceWindows([window])
 
-    XCTAssertTrue(catalogue.windowsForSwitcher.isEmpty)
-    XCTAssertEqual(catalogue.managedWindows.map(\.id), [editorWindow.id])
+    XCTAssertEqual(catalogue.windowsForSwitcher.first?.applicationName, "Editor")
   }
 
   func testMarkingFocusMovesOnlyThatEligibleWindowToFrontOfMRUOrder() {
@@ -84,6 +90,7 @@ final class WindowCatalogueTests: XCTestCase {
     CataloguedWindow(
       id: WindowID(processIdentifier: 1, windowNumber: id),
       bundleIdentifier: bundleIdentifier,
+      applicationName: "Example App",
       title: "Window \(id)",
       role: role,
       isMinimized: false,

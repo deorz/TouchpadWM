@@ -12,7 +12,7 @@ final class AppRulesControllerTests: XCTestCase {
     let zulu = InstalledApplication(
       bundleIdentifier: "zulu", name: "Zulu", url: URL(filePath: "/Applications/Zulu.app"))
     let controller = AppRulesController(
-      inventory: FixedInventory([zulu, alpha]), windowManagement: FakeAppRuleManager())
+      inventory: FixedInventory([zulu, alpha]), windowPicker: FakeAppRuleManager())
 
     controller.refresh()
 
@@ -23,7 +23,7 @@ final class AppRulesControllerTests: XCTestCase {
   @MainActor
   func testSettingARuleInvalidatesAnObservedRule() {
     let controller = AppRulesController(
-      inventory: FixedInventory([]), windowManagement: FakeAppRuleManager())
+      inventory: FixedInventory([]), windowPicker: FakeAppRuleManager())
     let observation = ObservationChangeRecorder()
 
     withObservationTracking {
@@ -38,10 +38,10 @@ final class AppRulesControllerTests: XCTestCase {
   }
 
   @MainActor
-  func testSettingARuleDelegatesTheIndependentFlagsToWindowManagement() {
+  func testSettingARuleDelegatesPickerInclusionToWindowPicker() {
     let manager = FakeAppRuleManager()
-    let controller = AppRulesController(inventory: FixedInventory([]), windowManagement: manager)
-    let rule = AppRule(includeInSwitcher: false, manageLayout: true)
+    let controller = AppRulesController(inventory: FixedInventory([]), windowPicker: manager)
+    let rule = AppRule(includeInSwitcher: false)
 
     controller.setRule(rule, for: "com.example.editor")
 
