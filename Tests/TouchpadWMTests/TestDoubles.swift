@@ -1,6 +1,6 @@
 @testable import TouchpadWM
 
-/// Shared `AccessibilityPermissionChecking` fake for every test that needs an `AppState`.
+/// Shared in-memory `AppRuleStoring` fake for tests that need a `WindowPickerController`.
 final class InMemoryAppRuleStore: AppRuleStoring {
   private var rules: [String: AppRule]
 
