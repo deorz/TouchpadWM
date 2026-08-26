@@ -66,6 +66,39 @@ final class WindowManagementControllerTests: XCTestCase {
     XCTAssertEqual(state.windowManagementStatus, "Accessibility access is required.")
   }
 
+  func testStoredSwitcherExclusionAppliesOnTheNextSwitcherRefresh() {
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let store = InMemoryAppRuleStore([
+      "com.example.app": .init(includeInSwitcher: false, manageLayout: true)
+    ])
+    let controller = WindowManagementController(service: service, ruleStore: store)
+
+    XCTAssertTrue(controller.refreshedWindowsForSwitcher().isEmpty)
+  }
+
+  func testStoredLayoutExclusionMakesTheNextLayoutCommandHaveNoFocusedManagedWindow() {
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let store = InMemoryAppRuleStore([
+      "com.example.app": .init(includeInSwitcher: true, manageLayout: false)
+    ])
+    let controller = WindowManagementController(service: service, ruleStore: store)
+
+    XCTAssertEqual(controller.apply(.leftHalf), .noFocusedManagedWindow)
+  }
+
+  func testUpdatingARuleIsUsedByALaterSwitcherRefresh() {
+    let service = InMemoryWindowService(
+      windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)
+    let store = InMemoryAppRuleStore()
+    let controller = WindowManagementController(service: service, ruleStore: store)
+    controller.setRule(
+      .init(includeInSwitcher: false, manageLayout: true), for: "com.example.app")
+
+    XCTAssertTrue(controller.refreshedWindowsForSwitcher().isEmpty)
+  }
+
   func testActivatingAKnownWindowRecordsItAndActivatingAnUnknownWindowFails() {
     let service = InMemoryWindowService(
       windows: [focusedNormalWindow], focusedID: focusedNormalWindow.id)

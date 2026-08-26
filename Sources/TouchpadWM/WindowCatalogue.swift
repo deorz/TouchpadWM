@@ -25,7 +25,7 @@ struct CataloguedWindow: Equatable {
   let visibleFrame: CGRect
 }
 
-struct AppRule: Equatable {
+struct AppRule: Codable, Equatable {
   var includeInSwitcher: Bool
   var manageLayout: Bool
 

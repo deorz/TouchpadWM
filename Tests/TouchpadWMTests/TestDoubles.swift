@@ -1,6 +1,22 @@
 @testable import TouchpadWM
 
 /// Shared `AccessibilityPermissionChecking` fake for every test that needs an `AppState`.
+final class InMemoryAppRuleStore: AppRuleStoring {
+  private var rules: [String: AppRule]
+
+  init(_ rules: [String: AppRule] = [:]) {
+    self.rules = rules
+  }
+
+  func rule(for bundleIdentifier: String) -> AppRule {
+    rules[bundleIdentifier] ?? .included
+  }
+
+  func setRule(_ rule: AppRule, for bundleIdentifier: String) {
+    rules[bundleIdentifier] = rule
+  }
+}
+
 final class PermissionSource: AccessibilityPermissionChecking, InputMonitoringPermissionChecking {
   var trusted: Bool
   var inputMonitoringAccess: Bool

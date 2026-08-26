@@ -23,16 +23,26 @@ protocol SwitcherWindowManaging: AnyObject {
   func activate(_ id: WindowID) -> Bool
 }
 
-final class WindowManagementController: WindowManaging, SwitcherWindowManaging {
+protocol AppRuleManaging: AnyObject {
+  func rule(for bundleIdentifier: String) -> AppRule
+  func setRule(_ rule: AppRule, for bundleIdentifier: String)
+}
+
+final class WindowManagementController: WindowManaging, SwitcherWindowManaging, AppRuleManaging {
   private let service: any AccessibilityWindowServicing
+  private let ruleStore: any AppRuleStoring
   private var catalogue = WindowCatalogue()
 
-  init(service: any AccessibilityWindowServicing) {
+  init(
+    service: any AccessibilityWindowServicing,
+    ruleStore: any AppRuleStoring = UserDefaultsAppRuleStore()
+  ) {
     self.service = service
+    self.ruleStore = ruleStore
   }
 
   func apply(_ zone: LayoutZone) -> LayoutOperationResult {
-    catalogue.replaceWindows(service.refreshWindows())
+    refreshCatalogue()
     guard let focusedID = service.focusedWindowID(),
       let focusedWindow = catalogue.managedWindows.first(where: { $0.id == focusedID })
     else {
@@ -44,7 +54,7 @@ final class WindowManagementController: WindowManaging, SwitcherWindowManaging {
   }
 
   func refreshedWindowsForSwitcher() -> [CataloguedWindow] {
-    catalogue.replaceWindows(service.refreshWindows())
+    refreshCatalogue()
     if let focusedID = service.focusedWindowID() {
       catalogue.markFocused(focusedID)
     }
@@ -57,5 +67,21 @@ final class WindowManagementController: WindowManaging, SwitcherWindowManaging {
 
   func activate(_ id: WindowID) -> Bool {
     service.activate(id)
+  }
+
+  func rule(for bundleIdentifier: String) -> AppRule {
+    ruleStore.rule(for: bundleIdentifier)
+  }
+
+  func setRule(_ rule: AppRule, for bundleIdentifier: String) {
+    ruleStore.setRule(rule, for: bundleIdentifier)
+  }
+
+  private func refreshCatalogue() {
+    let windows = service.refreshWindows()
+    catalogue.replaceWindows(windows)
+    for bundleIdentifier in Set(windows.map(\.bundleIdentifier)) {
+      catalogue.setRule(ruleStore.rule(for: bundleIdentifier), for: bundleIdentifier)
+    }
   }
 }

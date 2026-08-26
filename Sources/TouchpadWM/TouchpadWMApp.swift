@@ -5,6 +5,7 @@ import SwiftUI
 struct TouchpadWMApp: App {
   @Environment(\.scenePhase) private var scenePhase
   @State private var state: AppState
+  @State private var appRules: AppRulesController
   @State private var keyboardMonitor = KeyboardEventMonitor()
   @State private var overlay = SwitcherOverlayPanelController()
   @State private var switcherCoordinator: SwitcherGestureCoordinator
@@ -20,9 +21,11 @@ struct TouchpadWMApp: App {
     // startup step, and activating a windowless accessory app has no visible effect.
     NSApp.activate(ignoringOtherApps: true)
     let windowManagement = WindowManagementController(service: AccessibilityWindowService())
+    let appRules = AppRulesController(windowManagement: windowManagement)
     let overlay = SwitcherOverlayPanelController()
     let switcherController = SwitcherController(windowManaging: windowManagement)
     _state = State(initialValue: AppState(windowManagement: windowManagement))
+    _appRules = State(initialValue: appRules)
     _overlay = State(initialValue: overlay)
     let switcherCoordinator = SwitcherGestureCoordinator(
       switcherController: switcherController, overlay: overlay)
@@ -46,7 +49,7 @@ struct TouchpadWMApp: App {
       StatusMenuView(state: state, keyboardMonitor: keyboardMonitor)
     }
     Settings {
-      SettingsView(state: state)
+      SettingsView(state: state, appRules: appRules)
     }
     .onChange(of: scenePhase) { _, phase in
       guard phase == .active else {
@@ -145,9 +148,12 @@ private struct StatusMenuView: View {
 
 private struct SettingsView: View {
   let state: AppState
+  let appRules: AppRulesController
+  @State private var appSearch = ""
+  @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
-    Form {
+    List {
       Section("Accessibility") {
         Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
         Text("Window-management commands require Accessibility access.")
@@ -170,11 +176,49 @@ private struct SettingsView: View {
         }
       }
       Section("App Rules") {
-        Text("App Rules will appear here in a later milestone.")
+        TextField("Search applications", text: $appSearch)
+        ForEach(appRules.applications(matching: appSearch)) { application in
+          HStack(alignment: .top) {
+            Image(nsImage: iconCache.icon(for: application))
+              .resizable()
+              .frame(width: 32, height: 32)
+            VStack(alignment: .leading) {
+              Text(application.name)
+              Text(application.bundleIdentifier)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+              Toggle("Include in Switcher", isOn: switcherBinding(for: application))
+              Toggle("Manage Layout", isOn: layoutBinding(for: application))
+            }
+          }
+        }
       }
     }
-    .frame(width: 360)
-    .padding()
+    .frame(width: 420, height: 600)
+    .contentMargins(8, for: .scrollContent)
+    .onAppear {
+      appRules.refresh()
+    }
+  }
+
+  private func switcherBinding(for application: InstalledApplication) -> Binding<Bool> {
+    Binding(
+      get: { appRules.rule(for: application.bundleIdentifier).includeInSwitcher },
+      set: { includeInSwitcher in
+        var rule = appRules.rule(for: application.bundleIdentifier)
+        rule.includeInSwitcher = includeInSwitcher
+        appRules.setRule(rule, for: application.bundleIdentifier)
+      })
+  }
+
+  private func layoutBinding(for application: InstalledApplication) -> Binding<Bool> {
+    Binding(
+      get: { appRules.rule(for: application.bundleIdentifier).manageLayout },
+      set: { manageLayout in
+        var rule = appRules.rule(for: application.bundleIdentifier)
+        rule.manageLayout = manageLayout
+        appRules.setRule(rule, for: application.bundleIdentifier)
+      })
   }
 }
 
