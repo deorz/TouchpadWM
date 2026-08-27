@@ -27,9 +27,26 @@ struct TouchpadWMApp: App {
     switcherCoordinator.start()
   }
 
+  /// A monochrome template image: only its alpha channel is used, so AppKit tints it
+  /// automatically to match the light or dark menu bar. Embedded as base64 (see
+  /// `MenuBarIconData`) rather than an SPM resource bundle, which has no reliable location
+  /// inside a codesigned .app.
+  private static let menuBarIcon: NSImage = {
+    guard let data = Data(base64Encoded: MenuBarIconData.pdfBase64),
+      let image = NSImage(data: data)
+    else {
+      return NSImage(systemSymbolName: "hand.draw", accessibilityDescription: "Touchpad WM")
+        ?? NSImage()
+    }
+    image.isTemplate = true
+    return image
+  }()
+
   var body: some Scene {
-    MenuBarExtra("Touchpad WM", systemImage: "hand.draw") {
+    MenuBarExtra {
       StatusMenuView(state: state)
+    } label: {
+      Image(nsImage: Self.menuBarIcon)
     }
     Settings {
       SettingsView(state: state, appRules: appRules)
