@@ -23,6 +23,11 @@ for framework in "$bin_path"/*.framework; do
 done
 shopt -u nullglob
 
+if [[ -f "$repo_root/Resources/AppIcon.icns" ]]; then
+  mkdir -p "$app_path/Contents/Resources"
+  cp "$repo_root/Resources/AppIcon.icns" "$app_path/Contents/Resources/AppIcon.icns"
+fi
+
 cat > "$app_path/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -30,6 +35,8 @@ cat > "$app_path/Contents/Info.plist" <<'PLIST'
 <dict>
   <key>CFBundleExecutable</key>
   <string>TouchpadWM</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleIdentifier</key>
   <string>com.touchpadwm.app</string>
   <key>CFBundleName</key>
