@@ -1,22 +1,44 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
-name: Swift
+# Run every repository gate for changes going into master and publish tagged builds.
+name: CI
 
 on:
   push:
     branches: [ "master" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "master" ]
 
 jobs:
-  build:
-
+  quality:
+    name: Quality gates
     runs-on: macos-latest
+    permissions:
+      contents: read
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: swift build -v
-    - name: Run tests
-      run: swift test -v
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate workflow contract
+        run: ./Tests/QualityGateTests/workflow.sh
+      - name: Run Swift quality gate
+        run: ./Scripts/quality.sh
+      - name: Run quality-gate boundary tests
+        run: ./Tests/QualityGateTests/quality.sh
+
+  release:
+    name: Build and publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: quality
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build signed release archive
+        run: |
+          zip_path=$(./Scripts/release-app.sh)
+          gh release create "$GITHUB_REF_NAME" "$zip_path"
+        env:
+          GH_TOKEN: ${{ github.token }}
