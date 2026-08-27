@@ -98,14 +98,19 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     guard let element = elements[id] else {
       return false
     }
-    let raised = AXUIElementPerformAction(element, kAXRaiseAction as CFString) == .success
-    let focused =
-      AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-      == .success
-    if let application = NSRunningApplication(processIdentifier: id.processIdentifier) {
-      application.activate()
-    }
-    return raised && focused
+    let application = NSRunningApplication(processIdentifier: id.processIdentifier)
+    // Accessory apps must be active before AX raises or focuses one of their windows. In
+    // particular, this is required for the app's SwiftUI Settings scene to come forward from the
+    // picker; the menubar action already follows this order explicitly.
+    return WindowActivationSequence.perform(
+      activateApplication: { application?.activate() },
+      raiseWindow: {
+        AXUIElementPerformAction(element, kAXRaiseAction as CFString) == .success
+      },
+      focusWindow: {
+        AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+          == .success
+      })
   }
 
   private func candidate(from metadata: [String: Any], processIdentifier: pid_t) -> Candidate? {
