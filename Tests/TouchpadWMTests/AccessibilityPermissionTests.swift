@@ -22,7 +22,7 @@ final class AccessibilityPermissionTests: XCTestCase {
     let state = AppState(permissionChecker: source, refreshInterval: 0.03)
 
     source.trusted = true
-    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+    waitForAccessibilityGrant(state)
 
     XCTAssertEqual(state.accessibilityPermission, .available)
   }
@@ -57,12 +57,20 @@ final class AccessibilityPermissionTests: XCTestCase {
     let state = AppState(permissionChecker: source, refreshInterval: 0.03)
 
     source.trusted = true
-    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+    waitForAccessibilityGrant(state)
     XCTAssertEqual(state.accessibilityPermission, .available)
 
     let callCountAfterGranted = source.isTrustedCallCount
     RunLoop.main.run(until: Date().addingTimeInterval(0.1))
 
     XCTAssertEqual(source.isTrustedCallCount, callCountAfterGranted)
+  }
+
+  private func waitForAccessibilityGrant(_ state: AppState, timeout: TimeInterval = 1) {
+    let deadline = Date().addingTimeInterval(timeout)
+
+    while state.accessibilityPermission != .available && Date() < deadline {
+      RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+    }
   }
 }
