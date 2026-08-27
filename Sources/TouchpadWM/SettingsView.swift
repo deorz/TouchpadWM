@@ -31,7 +31,7 @@ struct SettingsView: View {
   let state: AppState
   let appRules: AppRulesController
 
-  @State private var selection: SettingsSection = .general
+  @State private var selection: SettingsSection? = .general
   @State private var appSearch = ""
   @State private var iconCache = ApplicationIconCache()
 
@@ -56,7 +56,7 @@ struct SettingsView: View {
 
 @MainActor
 private struct SettingsSidebar: View {
-  @Binding var selection: SettingsSection
+  @Binding var selection: SettingsSection?
 
   var body: some View {
     List(selection: $selection) {
@@ -75,7 +75,7 @@ private struct SettingsSidebar: View {
 
 @MainActor
 private struct SettingsDetailView: View {
-  let selection: SettingsSection
+  let selection: SettingsSection?
   let state: AppState
   let appRules: AppRulesController
   @Binding var appSearch: String
@@ -84,7 +84,7 @@ private struct SettingsDetailView: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 22) {
-        switch selection {
+        switch selection ?? .general {
         case .general:
           AccessibilitySettingsView(state: state)
         case .applications:
