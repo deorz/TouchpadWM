@@ -6,6 +6,7 @@ import SwiftUI
 /// `WindowPickerRowPresentation`.
 @MainActor
 final class SwitcherOverlayPanelController {
+  private let model = SwitcherOverlayModel()
   private var panel: NSPanel?
 
   func show(_ session: SwitcherSession) {
@@ -13,7 +14,7 @@ final class SwitcherOverlayPanelController {
     self.panel = panel
     let panelSize = SwitcherOverlayGeometry.panelSize(forWindowCount: session.windows.count)
     panel.setContentSize(panelSize)
-    panel.contentView = NSHostingView(rootView: SwitcherOverlayView(session: session))
+    model.show(session)
     if let screen = NSScreen.main {
       let origin = SwitcherOverlayGeometry.origin(
         forPanelSize: panelSize, centeredIn: screen.frame)
@@ -23,6 +24,7 @@ final class SwitcherOverlayPanelController {
   }
 
   func hide() {
+    model.hide()
     panel?.orderOut(nil)
   }
 
@@ -40,56 +42,74 @@ final class SwitcherOverlayPanelController {
     panel.hidesOnDeactivate = false
     panel.isOpaque = false
     panel.backgroundColor = .clear
+    panel.contentView = NSHostingView(rootView: SwitcherOverlayView(model: model))
     return panel
   }
 }
 
 @MainActor
 private struct SwitcherOverlayView: View {
-  let session: SwitcherSession
+  let model: SwitcherOverlayModel
   @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
-    ScrollViewReader { proxy in
-      ScrollView {
-        VStack(spacing: 0) {
-          Color.clear
-            .frame(height: SwitcherOverlayGeometry.verticalContentPadding)
+    Group {
+      if let session = model.session {
+        ScrollViewReader { proxy in
+          ScrollView {
+            VStack(spacing: 0) {
+              Color.clear
+                .frame(height: SwitcherOverlayGeometry.verticalContentPadding)
 
-          VStack(spacing: SwitcherOverlayGeometry.rowSpacing) {
-            ForEach(Array(session.windows.enumerated()).reversed(), id: \.element.id) {
-              index, window in
-              SwitcherOverlayRow(
-                presentation: WindowPickerRowPresentation(window: window),
-                isSelected: index == session.selectedIndex,
-                icon: iconCache.icon(forBundleIdentifier: window.bundleIdentifier)
-              )
-              .id(index)
+              VStack(spacing: SwitcherOverlayGeometry.rowSpacing) {
+                ForEach(Array(session.windows.enumerated()).reversed(), id: \.element.id) {
+                  index, window in
+                  SwitcherOverlayRow(
+                    presentation: WindowPickerRowPresentation(window: window),
+                    isSelected: index == session.selectedIndex,
+                    icon: iconCache.icon(forBundleIdentifier: window.bundleIdentifier)
+                  )
+                  .id(index)
+                }
+              }
+              .padding(.horizontal, 12)
+
+              Color.clear
+                .frame(height: SwitcherOverlayGeometry.verticalContentPadding)
+                .id(PickerScrollAnchor.bottomPadding)
             }
           }
-          .padding(.horizontal, 12)
-
-          Color.clear
-            .frame(height: SwitcherOverlayGeometry.verticalContentPadding)
-            .id(PickerScrollAnchor.bottomPadding)
-        }
-      }
-      .scrollIndicators(.hidden)
-      .onAppear {
-        proxy.scrollTo(PickerScrollAnchor.bottomPadding, anchor: .bottom)
-      }
-      .onChange(of: session.selectedIndex) { _, selectedIndex in
-        withAnimation(.easeOut(duration: 0.15)) {
-          if selectedIndex == 0 {
-            proxy.scrollTo(PickerScrollAnchor.bottomPadding, anchor: .bottom)
-          } else {
-            proxy.scrollTo(selectedIndex, anchor: .center)
+          .scrollIndicators(.hidden)
+          .onAppear {
+            scrollToInitialSelection(in: session, using: proxy)
+          }
+          .onChange(of: model.session) { oldSession, newSession in
+            guard let newSession else {
+              return
+            }
+            if oldSession == nil {
+              scrollToInitialSelection(in: newSession, using: proxy)
+            } else if oldSession?.selectedIndex != newSession.selectedIndex {
+              withAnimation(.easeOut(duration: 0.06)) {
+                proxy.scrollTo(newSession.selectedIndex, anchor: .center)
+              }
+            }
           }
         }
+      } else {
+        Color.clear
       }
     }
     .background(.regularMaterial)
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+  }
+
+  private func scrollToInitialSelection(in session: SwitcherSession, using proxy: ScrollViewProxy) {
+    if session.selectedIndex == 0 {
+      proxy.scrollTo(PickerScrollAnchor.bottomPadding, anchor: .bottom)
+    } else {
+      proxy.scrollTo(session.selectedIndex, anchor: .center)
+    }
   }
 }
 

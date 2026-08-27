@@ -15,10 +15,13 @@ enum SwitcherGestureCommand: Equatable {
 /// vertical-movement stream into the switcher's semantic command vocabulary. The underlying
 /// recognizer is untouched and still shared as-is with `TouchpadWMSpike`.
 struct SwitcherGestureRecognizer {
-  static let rowSelectionThreshold: Float = 0.15
+  static let rowDistance: Float = 0.08
+  static let sensitivity: Float = 1.0
+  static let maxSelectionChangesPerFrame = 2
 
   private var gestureRecognizer = ThreeFingerGestureRecognizer()
-  private var distanceConsumed: Float = 0
+  private var lastVerticalMovement: Float = 0
+  private var accumulatedMovement: Float = 0
 
   init() {}
 
@@ -29,17 +32,29 @@ struct SwitcherGestureRecognizer {
     for event in gestureRecognizer.consume(frame) {
       switch event {
       case .began:
-        distanceConsumed = 0
+        lastVerticalMovement = 0
+        accumulatedMovement = 0
         commands.append(.openSwitcher)
 
       case .changed(let totalVerticalMovement):
-        while totalVerticalMovement - distanceConsumed >= Self.rowSelectionThreshold - epsilon {
-          distanceConsumed += Self.rowSelectionThreshold
+        let delta = totalVerticalMovement - lastVerticalMovement
+        lastVerticalMovement = totalVerticalMovement
+        accumulatedMovement += delta * Self.sensitivity
+
+        var selectionChanges = 0
+        while accumulatedMovement >= Self.rowDistance - epsilon,
+          selectionChanges < Self.maxSelectionChangesPerFrame
+        {
+          accumulatedMovement -= Self.rowDistance
           commands.append(.moveSwitcherSelection(.previous))
+          selectionChanges += 1
         }
-        while distanceConsumed - totalVerticalMovement >= Self.rowSelectionThreshold - epsilon {
-          distanceConsumed -= Self.rowSelectionThreshold
+        while accumulatedMovement <= -Self.rowDistance + epsilon,
+          selectionChanges < Self.maxSelectionChangesPerFrame
+        {
+          accumulatedMovement += Self.rowDistance
           commands.append(.moveSwitcherSelection(.next))
+          selectionChanges += 1
         }
 
       case .ended:
