@@ -48,9 +48,10 @@ struct TouchpadWMApp: App {
     } label: {
       Image(nsImage: Self.menuBarIcon)
     }
-    Settings {
+    Window("Settings", id: "settings") {
       SettingsView(state: state, appRules: appRules)
     }
+    .defaultSize(width: 880, height: 560)
     .onChange(of: scenePhase) { _, phase in
       guard phase == .active else {
         return
@@ -66,7 +67,7 @@ struct TouchpadWMApp: App {
 }
 
 private struct StatusMenuView: View {
-  @Environment(\.openSettings) private var openSettings
+  @Environment(\.openWindow) private var openWindow
 
   let state: AppState
 
@@ -86,79 +87,11 @@ private struct StatusMenuView: View {
     Button("Settings") {
       NSApp.activate(ignoringOtherApps: true)
       DispatchQueue.main.async {
-        openSettings()
+        openWindow(id: "settings")
       }
     }
     Button("Quit Touchpad WM") {
       NSApplication.shared.terminate(nil)
     }
-  }
-}
-
-@MainActor
-private struct SettingsView: View {
-  let state: AppState
-  let appRules: AppRulesController
-  @State private var appSearch = ""
-  @State private var iconCache = ApplicationIconCache()
-
-  var body: some View {
-    List {
-      Section("Accessibility") {
-        LabeledContent("Status") {
-          Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
-            .foregroundStyle(
-              state.accessibilityPermission == .available ? .primary : .secondary)
-        }
-        Text("Touchpad WM needs Accessibility access to list and activate windows.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-        Button("Open Accessibility Settings") {
-          state.openAccessibilitySettings()
-        }
-        Button("Refresh Accessibility Status") {
-          state.refreshAccessibilityPermission()
-        }
-      }
-
-      Section("Apps") {
-        TextField("Search applications", text: $appSearch)
-        ForEach(appRules.applications(matching: appSearch)) { application in
-          HStack(spacing: 12) {
-            Image(nsImage: iconCache.icon(for: application))
-              .resizable()
-              .frame(width: 32, height: 32)
-            VStack(alignment: .leading, spacing: 2) {
-              Text(application.name)
-              Text(application.bundleIdentifier)
-                .font(.caption)
-                .lineLimit(1)
-                .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 12)
-            Toggle("Include in Picker", isOn: pickerBinding(for: application))
-              .labelsHidden()
-              .toggleStyle(.switch)
-              .accessibilityLabel("Include \(application.name) in Picker")
-          }
-          .padding(.vertical, 2)
-        }
-      }
-    }
-    .frame(width: 460, height: 600)
-    .contentMargins(8, for: .scrollContent)
-    .onAppear {
-      appRules.refresh()
-    }
-  }
-
-  private func pickerBinding(for application: InstalledApplication) -> Binding<Bool> {
-    Binding(
-      get: { appRules.rule(for: application.bundleIdentifier).includeInSwitcher },
-      set: { includeInSwitcher in
-        appRules.setRule(
-          AppRule(includeInSwitcher: includeInSwitcher),
-          for: application.bundleIdentifier)
-      })
   }
 }
