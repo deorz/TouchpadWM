@@ -51,4 +51,15 @@ cat > "$app_path/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
+# Sign nested bundle-format items before signing the app itself. This keeps the final
+# bundle valid for codesign --verify --deep --strict.
+shopt -s nullglob
+for nested in "$app_path"/Contents/MacOS/*.framework; do
+  codesign --force --sign - "$nested" >&2
+done
+shopt -u nullglob
+
+bundle_identifier=$(plutil -extract CFBundleIdentifier raw "$app_path/Contents/Info.plist")
+codesign --force --sign - --identifier "$bundle_identifier" "$app_path" >&2
+
 echo "$app_path"
