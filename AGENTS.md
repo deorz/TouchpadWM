@@ -17,7 +17,6 @@ Run these before requesting review, committing, or claiming completion:
 ```bash
 ./Scripts/quality.sh
 Tests/QualityGateTests/quality.sh
-node --test .dev-dashboard/tests/status.test.mjs
 ```
 
 `Scripts/quality.sh` runs Swift formatting lint, `swift build`, `swift test --enable-code-coverage`, and enforces at least **80% line coverage** for unit-testable production code. It excludes test/build artifacts plus the hardware- and OS-boundary adapters `MultitouchBridge.swift`, console `main.swift` (`Sources/TouchpadWMSpikeConsole/main.swift`), `AccessibilityWindowService.swift`, `SwitcherGestureCoordinator.swift`, `SwitcherOverlayPanel.swift`, and `ScrollEventSuppressor.swift`; retain their required real-hardware/real-Accessibility-permission acceptance test. Extract any pure logic out of these adapters (e.g. `AccessibilityWindowMetadata.swift`, `SwitcherGestureRecognizer.swift`, `SwitcherOverlayGeometry.swift`) into unit-tested files rather than excluding more than the adapter itself. It uses the selected Xcode toolchain's `llvm-cov` directly; do not substitute `xccov`.
@@ -35,12 +34,10 @@ Do not bypass a failing gate. Diagnose failures before changing code. Keep `Pack
 
 - Use TDD: add a focused failing test, verify the intended failure, implement the minimum behavior, then run the relevant suite and the full quality gate.
 - Do not use mocks to assert mock behavior; tests must exercise observable behavior.
-- Update `.dev-dashboard/status.json` before implementation work: set the matching task to `in-progress`, update `project.updatedAt`, and add a dated changelog entry. Record verification before moving to `review`; move to `done` only after final verification.
-- For visual behavior changes, update a local HTML capture under `.dev-dashboard/designs/` and its `designs/manifest.json` entry.
 
 ## Local-only artifacts and Git
 
-- `docs/`, `.dev-dashboard/`, `.agents/`, `.claude/`, `.superpowers/`, and `.build/` are local-only. Never stage or commit them.
+- `docs/`, `.agents/`, `.claude/`, `.superpowers/`, and `.build/` are local-only. Never stage or commit them.
 - Stage files explicitly and inspect `git diff --cached` before committing. Never include unrelated local changes.
 - Do not amend, rebase, force-push, or otherwise rewrite history unless the user explicitly requests it.
 - `CLAUDE.md` is a symlink to this file; edit `AGENTS.md` only.
