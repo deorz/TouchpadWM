@@ -6,6 +6,7 @@ struct TouchpadWMApp: App {
   @Environment(\.scenePhase) private var scenePhase
   @State private var state: AppState
   @State private var appRules: AppRulesController
+  @State private var gesturePreferences: GesturePreferences
   @State private var overlay: SwitcherOverlayPanelController
   @State private var switcherCoordinator: SwitcherGestureCoordinator
 
@@ -15,13 +16,17 @@ struct TouchpadWMApp: App {
 
     let windowPicker = WindowPickerController(service: AccessibilityWindowService())
     let appRules = AppRulesController(windowPicker: windowPicker)
+    let gesturePreferences = GesturePreferences()
     let overlay = SwitcherOverlayPanelController()
     let switcherController = SwitcherController(windowSource: windowPicker)
     let switcherCoordinator = SwitcherGestureCoordinator(
-      switcherController: switcherController, overlay: overlay)
+      switcherController: switcherController,
+      overlay: overlay,
+      preferences: gesturePreferences)
 
     _state = State(initialValue: AppState())
     _appRules = State(initialValue: appRules)
+    _gesturePreferences = State(initialValue: gesturePreferences)
     _overlay = State(initialValue: overlay)
     _switcherCoordinator = State(initialValue: switcherCoordinator)
     switcherCoordinator.start()
@@ -49,7 +54,10 @@ struct TouchpadWMApp: App {
       Image(nsImage: Self.menuBarIcon)
     }
     Window("Settings", id: "settings") {
-      SettingsView(state: state, appRules: appRules)
+      SettingsView(
+        state: state,
+        appRules: appRules,
+        gesturePreferences: gesturePreferences)
     }
     .defaultSize(width: 880, height: 560)
     .onChange(of: scenePhase) { _, phase in

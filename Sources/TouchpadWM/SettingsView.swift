@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
   let state: AppState
   let appRules: AppRulesController
+  let gesturePreferences: GesturePreferences
 
   @State private var selection: SettingsSection? = .accessibility
 
@@ -33,6 +34,8 @@ struct SettingsView: View {
     switch selection {
     case .accessibility:
       AccessibilitySettingsView(state: state)
+    case .gestures:
+      GesturesSettingsView(preferences: gesturePreferences)
     case .apps:
       AppsSettingsView(appRules: appRules)
     case nil:
@@ -43,6 +46,7 @@ struct SettingsView: View {
 
 private enum SettingsSection: String, CaseIterable, Hashable, Identifiable {
   case accessibility = "Accessibility"
+  case gestures = "Gestures"
   case apps = "Apps"
 
   var id: Self { self }
@@ -51,9 +55,81 @@ private enum SettingsSection: String, CaseIterable, Hashable, Identifiable {
     switch self {
     case .accessibility:
       "accessibility"
+    case .gestures:
+      "hand.draw"
     case .apps:
       "square.grid.2x2"
     }
+  }
+}
+
+@MainActor
+private struct GesturesSettingsView: View {
+  let preferences: GesturePreferences
+
+  var body: some View {
+    Form {
+      Section("Picker") {
+        Picker("Open picker with", selection: pickerTriggerBinding) {
+          ForEach(PickerTrigger.allCases, id: \.self) { trigger in
+            Text(trigger.label).tag(trigger)
+          }
+        }
+
+        VStack(alignment: .leading, spacing: 8) {
+          Slider(
+            value: sensitivityBinding,
+            in: 0...Double(GestureSensitivity.allCases.count - 1),
+            step: 1,
+            label: { Text("Sensitivity") },
+            minimumValueLabel: { Text("Less") },
+            maximumValueLabel: { Text("More") }
+          )
+          .accessibilityValue(Text(preferences.sensitivity.accessibilityLabel))
+
+          Text("Adjust how much finger movement changes the selected window.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+
+        Picker("Haptic feedback", selection: hapticStrengthBinding) {
+          ForEach(HapticFeedbackStrength.allCases, id: \.self) { strength in
+            Text(strength.label).tag(strength)
+          }
+        }
+        .pickerStyle(.segmented)
+
+        Text(
+          "macOS uses system haptic patterns; levels choose a softer or more pronounced response."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
+    }
+    .formStyle(.grouped)
+    .navigationTitle("Gestures")
+    .scenePadding()
+  }
+
+  private var pickerTriggerBinding: Binding<PickerTrigger> {
+    Binding(
+      get: { preferences.pickerTrigger },
+      set: { preferences.pickerTrigger = $0 })
+  }
+
+  private var sensitivityBinding: Binding<Double> {
+    Binding(
+      get: { Double(preferences.sensitivity.rawValue) },
+      set: { value in
+        let index = Int(value.rounded())
+        preferences.sensitivity = GestureSensitivity(rawValue: index) ?? .medium
+      })
+  }
+
+  private var hapticStrengthBinding: Binding<HapticFeedbackStrength> {
+    Binding(
+      get: { preferences.hapticStrength },
+      set: { preferences.hapticStrength = $0 })
   }
 }
 
