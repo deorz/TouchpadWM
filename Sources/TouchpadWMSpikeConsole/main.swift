@@ -8,9 +8,9 @@ guard bridge.start() else {
   exit(1)
 }
 
-print("Listening for three-finger gestures. Press Control-C to stop.")
+print("Listening for multi-finger gestures (default: 3 fingers). Press Control-C to stop.")
 Task {
-  var recognizer = ThreeFingerGestureRecognizer()
+  var recognizer = MultiFingerGestureRecognizer()
   for await frame in bridge.frames() {
     for event in recognizer.consume(frame) {
       print("GESTURE \(event)")

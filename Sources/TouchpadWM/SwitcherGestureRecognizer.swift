@@ -11,19 +11,42 @@ enum SwitcherGestureCommand: Equatable {
   case activateSwitcherSelection
 }
 
-/// Wraps the shared `ThreeFingerGestureRecognizer` to translate its raw, continuous
+/// Wraps the shared `MultiFingerGestureRecognizer` to translate its raw, continuous
 /// vertical-movement stream into the switcher's semantic command vocabulary. The underlying
 /// recognizer is untouched and still shared as-is with `TouchpadWMSpike`.
 struct SwitcherGestureRecognizer {
   static let rowDistance: Float = 0.08
-  static let sensitivity: Float = 1.0
   static let maxSelectionChangesPerFrame = 2
 
-  private var gestureRecognizer = ThreeFingerGestureRecognizer()
+  private var trigger: PickerTrigger
+  private var sensitivity: GestureSensitivity
+  private var gestureRecognizer: MultiFingerGestureRecognizer
   private var lastVerticalMovement: Float = 0
   private var accumulatedMovement: Float = 0
 
-  init() {}
+  init(
+    trigger: PickerTrigger = .threeFingers,
+    sensitivity: GestureSensitivity = .medium
+  ) {
+    self.trigger = trigger
+    self.sensitivity = sensitivity
+    gestureRecognizer = MultiFingerGestureRecognizer(fingerCount: trigger.fingerCount)
+  }
+
+  mutating func update(
+    trigger: PickerTrigger,
+    sensitivity: GestureSensitivity
+  ) {
+    guard self.trigger != trigger || self.sensitivity != sensitivity else {
+      return
+    }
+
+    self.trigger = trigger
+    self.sensitivity = sensitivity
+    gestureRecognizer = MultiFingerGestureRecognizer(fingerCount: trigger.fingerCount)
+    lastVerticalMovement = 0
+    accumulatedMovement = 0
+  }
 
   mutating func consume(_ frame: TouchFrame) -> [SwitcherGestureCommand] {
     var commands: [SwitcherGestureCommand] = []
@@ -39,7 +62,7 @@ struct SwitcherGestureRecognizer {
       case .changed(let totalVerticalMovement):
         let delta = totalVerticalMovement - lastVerticalMovement
         lastVerticalMovement = totalVerticalMovement
-        accumulatedMovement += delta * Self.sensitivity
+        accumulatedMovement += delta * sensitivity.movementMultiplier
 
         var selectionChanges = 0
         while accumulatedMovement >= Self.rowDistance - epsilon,

@@ -10,6 +10,7 @@ final class SwitcherGestureCoordinator {
   private let bridge: MultitouchBridge
   private let scrollSuppressor: ScrollEventSuppressor
   private let haptics: HapticFeedbackPerformer
+  private let preferences: GesturePreferences
   private var recognizer = SwitcherGestureRecognizer()
   private var listenTask: Task<Void, Never>?
 
@@ -18,13 +19,18 @@ final class SwitcherGestureCoordinator {
     overlay: SwitcherOverlayPanelController,
     bridge: MultitouchBridge = MultitouchBridge(),
     scrollSuppressor: ScrollEventSuppressor = ScrollEventSuppressor(),
-    haptics: HapticFeedbackPerformer = HapticFeedbackPerformer()
+    haptics: HapticFeedbackPerformer = HapticFeedbackPerformer(),
+    preferences: GesturePreferences = GesturePreferences()
   ) {
     self.switcherController = switcherController
     self.overlay = overlay
     self.bridge = bridge
     self.scrollSuppressor = scrollSuppressor
     self.haptics = haptics
+    self.preferences = preferences
+    recognizer = SwitcherGestureRecognizer(
+      trigger: preferences.pickerTrigger,
+      sensitivity: preferences.sensitivity)
   }
 
   func start() {
@@ -40,13 +46,21 @@ final class SwitcherGestureCoordinator {
   }
 
   private func handle(_ frame: TouchFrame) {
+    recognizer.update(
+      trigger: preferences.pickerTrigger,
+      sensitivity: preferences.sensitivity)
     for command in recognizer.consume(frame) {
       handle(command)
     }
   }
 
   private func handle(_ command: SwitcherGestureCommand) {
-    haptics.perform(SwitcherHapticPolicy.feedback(for: command))
+    if let feedback = SwitcherHapticPolicy.feedback(
+      for: command,
+      strength: preferences.hapticStrength)
+    {
+      haptics.perform(feedback)
+    }
     switch command {
     case .openSwitcher:
       switcherController.open()

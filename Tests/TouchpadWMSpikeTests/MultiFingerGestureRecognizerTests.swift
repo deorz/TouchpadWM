@@ -2,9 +2,9 @@ import XCTest
 
 @testable import TouchpadWMSpike
 
-final class ThreeFingerGestureRecognizerTests: XCTestCase {
-  func testThreeContactsBeginAndMovingUpReportsPositiveDistance() {
-    var recognizer = ThreeFingerGestureRecognizer()
+final class MultiFingerGestureRecognizerTests: XCTestCase {
+  func testRequiredContactsBeginAndMovingUpReportsPositiveDistance() {
+    var recognizer = MultiFingerGestureRecognizer()
 
     XCTAssertEqual(recognizer.consume(frame(ids: [1, 2, 3], y: 0.2)), [.began])
     XCTAssertEqual(
@@ -14,13 +14,13 @@ final class ThreeFingerGestureRecognizerTests: XCTestCase {
   }
 
   func testTwoContactsProduceNoEvent() {
-    var recognizer = ThreeFingerGestureRecognizer()
+    var recognizer = MultiFingerGestureRecognizer()
 
     XCTAssertEqual(recognizer.consume(frame(ids: [1, 2], y: 0.2)), [])
   }
 
   func testRemovingOneTrackedFingerEmitsEndedOnce() {
-    var recognizer = ThreeFingerGestureRecognizer()
+    var recognizer = MultiFingerGestureRecognizer()
 
     XCTAssertEqual(recognizer.consume(frame(ids: [1, 2, 3], y: 0.2)), [.began])
     XCTAssertEqual(recognizer.consume(frame(ids: [1, 2], y: 0.5)), [.ended])

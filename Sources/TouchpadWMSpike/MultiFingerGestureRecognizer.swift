@@ -1,20 +1,29 @@
-public enum ThreeFingerGestureEvent: Equatable {
+public enum MultiFingerGestureEvent: Equatable {
   case began
   case changed(totalVerticalMovement: Float)
   case ended
 }
 
-public struct ThreeFingerGestureRecognizer {
+public struct MultiFingerGestureRecognizer {
+  private let requiredFingerCount: Int
   private var trackedIDs: Set<Int32>?
   private var originY: Float?
 
-  public init() {}
+  public init() {
+    self.init(fingerCount: 3)
+  }
 
-  public mutating func consume(_ frame: TouchFrame) -> [ThreeFingerGestureEvent] {
+  public init(fingerCount: Int) {
+    requiredFingerCount = max(fingerCount, 1)
+  }
+
+  public mutating func consume(_ frame: TouchFrame) -> [MultiFingerGestureEvent] {
     let currentIDs = Set(frame.contacts.map(\.id))
 
     guard let trackedIDs, let originY else {
-      guard frame.contacts.count == 3, currentIDs.count == 3 else {
+      guard frame.contacts.count == requiredFingerCount,
+        currentIDs.count == requiredFingerCount
+      else {
         return []
       }
 
@@ -23,7 +32,7 @@ public struct ThreeFingerGestureRecognizer {
       return [.began]
     }
 
-    guard frame.contacts.count == 3, currentIDs == trackedIDs else {
+    guard frame.contacts.count == requiredFingerCount, currentIDs == trackedIDs else {
       self.trackedIDs = nil
       self.originY = nil
       return [.ended]
