@@ -5,16 +5,12 @@ enum PickerWindowEligibility {
     bundleIdentifier: String?,
     windowLayer: Int,
     frame: CGRect,
-    role: WindowRole
+    accessibilitySubrole: String?
   ) -> Bool {
     bundleIdentifier != "com.apple.universalcontrol"
-      && !isChromeFloatingWindow(bundleIdentifier: bundleIdentifier, role: role)
+      && AccessibilityWindowMetadata.isSwitcherCandidateSubrole(accessibilitySubrole)
       && windowLayer == 0
       && frame.width > 100
       && frame.height > 50
-  }
-
-  private static func isChromeFloatingWindow(bundleIdentifier: String?, role: WindowRole) -> Bool {
-    bundleIdentifier == "com.google.Chrome" && role == .floating
   }
 }
