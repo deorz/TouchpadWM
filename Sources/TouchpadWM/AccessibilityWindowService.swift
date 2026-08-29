@@ -140,7 +140,6 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
     return AXUIElementCopyAttributeValue(element, attribute, &value) == .success ? value : nil
   }
 
-
   private func visibleFrame(containing frame: CGRect) -> CGRect {
     let midpoint = CGPoint(x: frame.midX, y: frame.midY)
     let screens = NSScreen.screens
