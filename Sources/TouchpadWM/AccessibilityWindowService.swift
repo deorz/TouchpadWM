@@ -47,11 +47,15 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
         else {
           continue
         }
+        let axRole = attributeValue(kAXRoleAttribute as CFString, of: axWindow) as? String
+        let axSubrole = attributeValue(kAXSubroleAttribute as CFString, of: axWindow) as? String
+        let windowRole = AccessibilityWindowMetadata.role(role: axRole, subrole: axSubrole)
         guard
           PickerWindowEligibility.shouldInclude(
             bundleIdentifier: application.bundleIdentifier,
             windowLayer: candidate.layer,
-            frame: candidate.frame)
+            frame: candidate.frame,
+            accessibilitySubrole: axSubrole)
         else {
           continue
         }
@@ -64,7 +68,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
             bundleIdentifier: application.bundleIdentifier ?? "",
             applicationName: application.localizedName ?? application.bundleIdentifier ?? "",
             title: (attributeValue(kAXTitleAttribute as CFString, of: axWindow) as? String) ?? "",
-            role: role(of: axWindow),
+            role: windowRole,
             isMinimized: (attributeValue(kAXMinimizedAttribute as CFString, of: axWindow) as? Bool)
               ?? false,
             visibleFrame: visibleFrame(containing: candidate.frame)))
@@ -134,12 +138,6 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private func attributeValue(_ attribute: CFString, of element: AXUIElement) -> CFTypeRef? {
     var value: CFTypeRef?
     return AXUIElementCopyAttributeValue(element, attribute, &value) == .success ? value : nil
-  }
-
-  private func role(of element: AXUIElement) -> WindowRole {
-    AccessibilityWindowMetadata.role(
-      role: attributeValue(kAXRoleAttribute as CFString, of: element) as? String,
-      subrole: attributeValue(kAXSubroleAttribute as CFString, of: element) as? String)
   }
 
   private func visibleFrame(containing frame: CGRect) -> CGRect {
