@@ -11,5 +11,7 @@ app=.build/arm64-apple-macosx/debug/TouchpadWM.app
 plutil -extract CFBundleExecutable raw "$app/Contents/Info.plist" | grep -Fx TouchpadWM
 plutil -extract CFBundlePackageType raw "$app/Contents/Info.plist" | grep -Fx APPL
 plutil -extract LSUIElement raw "$app/Contents/Info.plist" | grep -Fx true
+codesign --verify --deep --strict "$app"
+codesign --display --verbose=4 "$app" 2>&1 | grep -Fx 'Identifier=com.touchpadwm.app'
 
-echo "app bundle contains executable and accessory metadata"
+echo "app bundle contains executable, accessory metadata, and a stable code identity"
