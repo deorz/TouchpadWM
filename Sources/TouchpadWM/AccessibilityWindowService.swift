@@ -147,7 +147,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private func visibleFrame(containing frame: CGRect) -> CGRect {
     let midpoint = CGPoint(x: frame.midX, y: frame.midY)
     let screens = NSScreen.screens
-    let desktopTop = screens.map(\\.frame.maxY).max() ?? frame.maxY
+    let desktopTop = screens.map(\.frame.maxY).max() ?? frame.maxY
     let screen =
       screens.first(where: {
         accessibilityFrame(for: $0.frame, desktopTop: desktopTop).contains(midpoint)
