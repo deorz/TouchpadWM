@@ -47,11 +47,13 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
         else {
           continue
         }
+        let role = role(of: axWindow)
         guard
           PickerWindowEligibility.shouldInclude(
             bundleIdentifier: application.bundleIdentifier,
             windowLayer: candidate.layer,
-            frame: candidate.frame)
+            frame: candidate.frame,
+            role: role)
         else {
           continue
         }
@@ -64,7 +66,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
             bundleIdentifier: application.bundleIdentifier ?? "",
             applicationName: application.localizedName ?? application.bundleIdentifier ?? "",
             title: (attributeValue(kAXTitleAttribute as CFString, of: axWindow) as? String) ?? "",
-            role: role(of: axWindow),
+            role: role,
             isMinimized: (attributeValue(kAXMinimizedAttribute as CFString, of: axWindow) as? Bool)
               ?? false,
             visibleFrame: visibleFrame(containing: candidate.frame)))
@@ -145,7 +147,7 @@ final class AccessibilityWindowService: AccessibilityWindowServicing {
   private func visibleFrame(containing frame: CGRect) -> CGRect {
     let midpoint = CGPoint(x: frame.midX, y: frame.midY)
     let screens = NSScreen.screens
-    let desktopTop = screens.map(\.frame.maxY).max() ?? frame.maxY
+    let desktopTop = screens.map(\\.frame.maxY).max() ?? frame.maxY
     let screen =
       screens.first(where: {
         accessibilityFrame(for: $0.frame, desktopTop: desktopTop).contains(midpoint)
