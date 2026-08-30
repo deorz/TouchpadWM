@@ -9,6 +9,7 @@ struct TouchpadWMApp: App {
   @State private var gesturePreferences: GesturePreferences
   @State private var overlay: SwitcherOverlayPanelController
   @State private var switcherCoordinator: SwitcherGestureCoordinator
+  @State private var pickerStartup: PickerStartupGate
 
   init() {
     NSApplication.shared.setActivationPolicy(.accessory)
@@ -23,13 +24,18 @@ struct TouchpadWMApp: App {
       switcherController: switcherController,
       overlay: overlay,
       preferences: gesturePreferences)
+    let appState = AppState()
+    let pickerStartup = PickerStartupGate()
 
-    _state = State(initialValue: AppState())
+    _state = State(initialValue: appState)
     _appRules = State(initialValue: appRules)
     _gesturePreferences = State(initialValue: gesturePreferences)
     _overlay = State(initialValue: overlay)
     _switcherCoordinator = State(initialValue: switcherCoordinator)
-    switcherCoordinator.start()
+    _pickerStartup = State(initialValue: pickerStartup)
+    pickerStartup.startIfPermitted(appState.accessibilityPermission) {
+      switcherCoordinator.start()
+    }
   }
 
   /// A monochrome template image: only its alpha channel is used, so AppKit tints it
@@ -67,7 +73,7 @@ struct TouchpadWMApp: App {
       state.refreshAccessibilityPermission()
     }
     .onChange(of: state.accessibilityPermission) { _, permission in
-      if permission == .available {
+      pickerStartup.startIfPermitted(permission) {
         switcherCoordinator.start()
       }
     }

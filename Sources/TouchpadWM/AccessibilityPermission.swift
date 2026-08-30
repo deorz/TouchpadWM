@@ -8,6 +8,22 @@ enum AccessibilityPermissionState: Equatable {
   case unavailable
 }
 
+@MainActor
+final class PickerStartupGate {
+  private var hasStarted = false
+
+  func startIfPermitted(
+    _ permission: AccessibilityPermissionState,
+    start: () -> Void
+  ) {
+    guard permission == .available, !hasStarted else {
+      return
+    }
+    hasStarted = true
+    start()
+  }
+}
+
 protocol AccessibilityPermissionChecking {
   func isTrusted() -> Bool
   func openSettings() -> Bool
