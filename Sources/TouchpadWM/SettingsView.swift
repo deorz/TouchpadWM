@@ -190,7 +190,9 @@ private struct AppsSettingsView: View {
           }
           .buttonStyle(.borderless)
           .disabled(
-            newExclusionPattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            newExclusionPattern
+              .trimmingCharacters(in: .whitespacesAndNewlines)
+              .isEmpty)
           .accessibilityLabel("Add custom exclusion")
           .help("Add custom exclusion")
         }
@@ -208,9 +210,10 @@ private struct AppsSettingsView: View {
         Text(
           "Turning off an application adds an editable exact regex. "
             + "Patterns match bundle identifiers case-insensitively. "
-            + "Example: ^com\\.checkpoint\\.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+            + "Example: ^com\\.checkpoint\\."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
       }
 
       Section("Applications") {
@@ -246,7 +249,8 @@ private struct AppsSettingsView: View {
     .searchable(
       text: $appSearch,
       placement: .toolbar,
-      prompt: "Search applications")
+      prompt: "Search applications"
+    )
     .onAppear {
       appRules.refresh()
     }
@@ -272,7 +276,6 @@ private struct AppsSettingsView: View {
     patternError = nil
   }
 }
-
 
 @MainActor
 private struct ExclusionPatternRow: View {
