@@ -209,7 +209,7 @@ private struct AppsSettingsView: View {
         }
 
         Text(
-          "Turning off an application adds an editable exact regex. "
+          "Use + to add an editable exact regex. "
             + "Patterns match bundle identifiers case-insensitively. "
             + "Example: ^com\\.checkpoint\\."
         )
@@ -234,11 +234,15 @@ private struct AppsSettingsView: View {
 
             Spacer(minLength: 12)
 
-            Toggle("Include in Picker", isOn: pickerBinding(for: application))
-              .labelsHidden()
-              .toggleStyle(.switch)
-              .accessibilityLabel("Include \(application.name) in Picker")
-              .help("Turning this off adds an editable exact bundle ID regex.")
+            Button {
+              appRules.addApplicationExclusion(for: application.bundleIdentifier)
+            } label: {
+              Image(systemName: "plus")
+            }
+            .buttonStyle(.borderless)
+            .disabled(appRules.hasApplicationExclusion(for: application.bundleIdentifier))
+            .accessibilityLabel("Add \(application.name) to Picker exclusions")
+            .help("Add an exact bundle ID regex to exclusions")
           }
           .padding(.vertical, 2)
         }
@@ -255,16 +259,6 @@ private struct AppsSettingsView: View {
     .onAppear {
       appRules.refresh()
     }
-  }
-
-  private func pickerBinding(for application: InstalledApplication) -> Binding<Bool> {
-    Binding(
-      get: { appRules.rule(for: application.bundleIdentifier).includeInSwitcher },
-      set: { includeInSwitcher in
-        appRules.setApplicationIncluded(
-          includeInSwitcher,
-          for: application.bundleIdentifier)
-      })
   }
 
   private func addExclusionPattern() {
