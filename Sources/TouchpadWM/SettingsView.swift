@@ -202,26 +202,13 @@ private struct AppsSettingsView: View {
         }
 
         ForEach(appRules.exclusionPatterns) { exclusion in
-          HStack(spacing: 8) {
-            Text(exclusion.pattern)
-              .font(.system(.body, design: .monospaced))
-              .lineLimit(1)
-
-            Spacer(minLength: 12)
-
-            Button {
-              appRules.removeExclusionPattern(exclusion)
-            } label: {
-              Image(systemName: "trash")
-            }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
-            .accessibilityLabel("Remove exclusion \(exclusion.pattern)")
-            .help("Remove exclusion")
-          }
+          ExclusionPatternRow(appRules: appRules, pattern: exclusion)
         }
 
-        Text("Patterns are matched against bundle identifiers. Example: ^com\\.checkpoint\\.")
+        Text(
+          "Turning off an application adds an editable exact regex. "
+            + "Patterns match bundle identifiers case-insensitively. "
+            + "Example: ^com\\.checkpoint\\.")
           .font(.caption)
           .foregroundStyle(.secondary)
       }
@@ -247,6 +234,7 @@ private struct AppsSettingsView: View {
               .labelsHidden()
               .toggleStyle(.switch)
               .accessibilityLabel("Include \(application.name) in Picker")
+              .help("Turning this off adds an editable exact bundle ID regex.")
           }
           .padding(.vertical, 2)
         }
@@ -268,8 +256,8 @@ private struct AppsSettingsView: View {
     Binding(
       get: { appRules.rule(for: application.bundleIdentifier).includeInSwitcher },
       set: { includeInSwitcher in
-        appRules.setRule(
-          AppRule(includeInSwitcher: includeInSwitcher),
+        appRules.setApplicationIncluded(
+          includeInSwitcher,
           for: application.bundleIdentifier)
       })
   }
@@ -282,5 +270,72 @@ private struct AppsSettingsView: View {
 
     newExclusionPattern = ""
     patternError = nil
+  }
+}
+
+
+@MainActor
+private struct ExclusionPatternRow: View {
+  let appRules: AppRulesController
+  let pattern: AppExclusionPattern
+
+  @State private var draft: String
+  @State private var errorMessage: String?
+
+  init(appRules: AppRulesController, pattern: AppExclusionPattern) {
+    self.appRules = appRules
+    self.pattern = pattern
+    _draft = State(initialValue: pattern.pattern)
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack(spacing: 8) {
+        TextField("Bundle ID regex", text: $draft)
+          .font(.system(.body, design: .monospaced))
+          .textFieldStyle(.roundedBorder)
+          .onSubmit(save)
+
+        Button {
+          save()
+        } label: {
+          Image(systemName: "checkmark")
+        }
+        .buttonStyle(.borderless)
+        .disabled(draft == currentPattern)
+        .accessibilityLabel("Save exclusion")
+        .help("Save exclusion")
+
+        Button {
+          appRules.removeExclusionPattern(pattern)
+        } label: {
+          Image(systemName: "trash")
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .accessibilityLabel("Remove exclusion")
+        .help("Remove exclusion")
+      }
+
+      if let errorMessage {
+        Text(errorMessage)
+          .font(.caption)
+          .foregroundStyle(.red)
+      }
+    }
+  }
+
+  private var currentPattern: String {
+    appRules.exclusionPatterns.first(where: { $0.id == pattern.id })?.pattern
+      ?? pattern.pattern
+  }
+
+  private func save() {
+    guard appRules.updateExclusionPattern(pattern, to: draft) else {
+      errorMessage = "Enter a valid, non-duplicate regular expression."
+      return
+    }
+
+    errorMessage = nil
   }
 }
