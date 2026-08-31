@@ -18,6 +18,7 @@ struct ApplicationInventory: ApplicationInventorying {
     URL(filePath: "/Applications"),
     FileManager.default.homeDirectoryForCurrentUser.appending(path: "Applications"),
     URL(filePath: "/System/Applications"),
+    URL(filePath: "/Library/Application Support"),
   ]
 
   private let roots: [URL]
