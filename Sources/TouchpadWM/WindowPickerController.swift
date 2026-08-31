@@ -13,6 +13,9 @@ protocol SwitcherWindowSourcing: AnyObject {
 protocol AppRuleManaging: AnyObject {
   func rule(for bundleIdentifier: String) -> AppRule
   func setRule(_ rule: AppRule, for bundleIdentifier: String)
+  func exclusionPatterns() -> [AppExclusionPattern]
+  func addExclusionPattern(_ pattern: AppExclusionPattern)
+  func removeExclusionPattern(id: UUID)
 }
 
 final class WindowPickerController: SwitcherWindowSourcing, AppRuleManaging {
@@ -50,6 +53,18 @@ final class WindowPickerController: SwitcherWindowSourcing, AppRuleManaging {
 
   func setRule(_ rule: AppRule, for bundleIdentifier: String) {
     ruleStore.setRule(rule, for: bundleIdentifier)
+  }
+
+  func exclusionPatterns() -> [AppExclusionPattern] {
+    ruleStore.exclusionPatterns()
+  }
+
+  func addExclusionPattern(_ pattern: AppExclusionPattern) {
+    ruleStore.addExclusionPattern(pattern)
+  }
+
+  func removeExclusionPattern(id: UUID) {
+    ruleStore.removeExclusionPattern(id: id)
   }
 
   private func refreshCatalogue() {
