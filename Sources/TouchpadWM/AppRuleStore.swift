@@ -70,9 +70,11 @@ final class UserDefaultsAppRuleStore: AppRuleStoring {
     guard let index = updated.firstIndex(where: { $0.id == pattern.id }) else {
       return
     }
-    guard !updated.contains(where: {
-      $0.id != pattern.id && $0.pattern == pattern.pattern
-    }) else {
+    guard
+      !updated.contains(where: {
+        $0.id != pattern.id && $0.pattern == pattern.pattern
+      })
+    else {
       return
     }
 
