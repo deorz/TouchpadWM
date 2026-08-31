@@ -1,3 +1,5 @@
+import Foundation
+
 protocol AccessibilityWindowServicing: AnyObject {
   func refreshWindows() -> [CataloguedWindow]
   func focusedWindowID() -> WindowID?
