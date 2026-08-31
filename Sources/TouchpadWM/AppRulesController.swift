@@ -43,32 +43,29 @@ final class AppRulesController {
     windowPicker.setRule(rule, for: bundleIdentifier)
   }
 
-  func setApplicationIncluded(_ included: Bool, for bundleIdentifier: String) {
+  func hasApplicationExclusion(for bundleIdentifier: String) -> Bool {
+    guard let exactPattern = AppExclusionPattern(exactBundleIdentifier: bundleIdentifier) else {
+      return false
+    }
+
+    return exclusionPatterns.contains {
+      $0.sourceBundleIdentifier == bundleIdentifier
+        || $0.pattern == exactPattern.pattern
+    }
+  }
+
+  @discardableResult
+  func addApplicationExclusion(for bundleIdentifier: String) -> Bool {
+    guard
+      let exactPattern = AppExclusionPattern(exactBundleIdentifier: bundleIdentifier),
+      !hasApplicationExclusion(for: bundleIdentifier)
+    else {
+      return false
+    }
+
     rules.removeValue(forKey: bundleIdentifier)
     windowPicker.removeRule(for: bundleIdentifier)
-
-    if included {
-      let applicationPatterns = exclusionPatterns.filter {
-        $0.sourceBundleIdentifier == bundleIdentifier
-      }
-      applicationPatterns.forEach(removeExclusionPattern)
-
-      if !windowPicker.rule(for: bundleIdentifier).includeInSwitcher {
-        setRule(.included, for: bundleIdentifier)
-      }
-      return
-    }
-
-    guard
-      !exclusionPatterns.contains(where: {
-        $0.sourceBundleIdentifier == bundleIdentifier
-      }),
-      let pattern = AppExclusionPattern(exactBundleIdentifier: bundleIdentifier)
-    else {
-      return
-    }
-
-    addExclusionPattern(pattern)
+    return addExclusionPattern(exactPattern)
   }
 
   @discardableResult
