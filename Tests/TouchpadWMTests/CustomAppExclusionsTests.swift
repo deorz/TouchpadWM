@@ -55,7 +55,6 @@ final class CustomAppExclusionsTests: XCTestCase {
     XCTAssertEqual(store.rule(for: "com.checkpoint.EPWebGUI"), .included)
   }
 
-
   func testEditingCustomExclusionPersistsWithTheSameIdentity() throws {
     let defaults = makeDefaults()
     let firstStore = UserDefaultsAppRuleStore(defaults: defaults)
@@ -157,8 +156,7 @@ final class CustomAppExclusionsTests: XCTestCase {
     let application = InstalledApplication(
       bundleIdentifier: "com.checkpoint.EPWebGUI",
       name: "Endpoint Security",
-      url: URL(
-        filePath: "/Library/Application Support/Checkpoint/Endpoint Security/Endpoint Security.app"))
+      url: URL(filePath: "/Applications/Endpoint Security.app"))
     let manager = RecordingAppRuleManager()
     let controller = AppRulesController(
       inventory: FixedInventory([application]),
