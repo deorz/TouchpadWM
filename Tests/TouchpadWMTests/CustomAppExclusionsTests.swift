@@ -230,12 +230,23 @@ private final class RecordingAppRuleManager: AppRuleManaging {
     rules[bundleIdentifier] = rule
   }
 
+  func removeRule(for bundleIdentifier: String) {
+    rules.removeValue(forKey: bundleIdentifier)
+  }
+
   func exclusionPatterns() -> [AppExclusionPattern] {
     storedPatterns
   }
 
   func addExclusionPattern(_ pattern: AppExclusionPattern) {
     storedPatterns.append(pattern)
+  }
+
+  func updateExclusionPattern(_ pattern: AppExclusionPattern) {
+    guard let index = storedPatterns.firstIndex(where: { $0.id == pattern.id }) else {
+      return
+    }
+    storedPatterns[index] = pattern
   }
 
   func removeExclusionPattern(id: UUID) {
