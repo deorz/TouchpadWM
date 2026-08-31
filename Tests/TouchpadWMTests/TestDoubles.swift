@@ -1,19 +1,46 @@
+import Foundation
+
 @testable import TouchpadWM
 
 /// Shared in-memory `AppRuleStoring` fake for tests that need a `WindowPickerController`.
 final class InMemoryAppRuleStore: AppRuleStoring {
   private var rules: [String: AppRule]
+  private var storedExclusionPatterns: [AppExclusionPattern]
 
-  init(_ rules: [String: AppRule] = [:]) {
+  init(
+    _ rules: [String: AppRule] = [:],
+    exclusionPatterns: [AppExclusionPattern] = []
+  ) {
     self.rules = rules
+    storedExclusionPatterns = exclusionPatterns
   }
 
   func rule(for bundleIdentifier: String) -> AppRule {
-    rules[bundleIdentifier] ?? .included
+    if let rule = rules[bundleIdentifier] {
+      return rule
+    }
+    return storedExclusionPatterns.contains { $0.matches(bundleIdentifier) }
+      ? .excluded
+      : .included
   }
 
   func setRule(_ rule: AppRule, for bundleIdentifier: String) {
     rules[bundleIdentifier] = rule
+  }
+
+  func exclusionPatterns() -> [AppExclusionPattern] {
+    storedExclusionPatterns
+  }
+
+  func addExclusionPattern(_ pattern: AppExclusionPattern) {
+    guard !storedExclusionPatterns.contains(where: { $0.pattern == pattern.pattern }) else {
+      return
+    }
+    storedExclusionPatterns.append(pattern)
+  }
+
+  func removeExclusionPattern(id: UUID) {
+    storedExclusionPatterns.removeAll { $0.id == id }
   }
 }
 
