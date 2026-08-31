@@ -159,7 +159,7 @@ final class CustomAppExclusionsTests: XCTestCase {
       url: URL(filePath: "/Applications/Endpoint Security.app"))
     let manager = RecordingAppRuleManager()
     let controller = AppRulesController(
-      inventory: FixedInventory([application]),
+      inventory: EmptyInventory(),
       windowPicker: manager)
 
     controller.refresh()
