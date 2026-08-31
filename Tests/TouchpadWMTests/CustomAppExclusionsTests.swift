@@ -116,6 +116,68 @@ final class CustomAppExclusionsTests: XCTestCase {
     XCTAssertEqual(manager.storedPatterns.first?.pattern, #"^com\.example\."#)
   }
 
+
+  @MainActor
+  func testDisablingApplicationAddsAnExactEditableExclusion() throws {
+    let application = InstalledApplication(
+      bundleIdentifier: "com.checkpoint.EPWebGUI",
+      name: "Endpoint Security",
+      url: URL(filePath: "/Library/Application Support/Checkpoint/Endpoint Security/Endpoint Security.app"))
+    let manager = RecordingAppRuleManager()
+    let controller = AppRulesController(
+      inventory: FixedInventory([application]),
+      windowPicker: manager)
+
+    controller.refresh()
+    controller.setApplicationIncluded(false, for: application.bundleIdentifier)
+
+    let generatedPattern = try XCTUnwrap(controller.exclusionPatterns.first)
+    XCTAssertEqual(generatedPattern.pattern, #"^com\.checkpoint\.EPWebGUI$"#)
+    XCTAssertEqual(generatedPattern.sourceBundleIdentifier, application.bundleIdentifier)
+    XCTAssertEqual(controller.rule(for: application.bundleIdentifier), .excluded)
+
+    XCTAssertTrue(
+      controller.updateExclusionPattern(
+        generatedPattern,
+        to: #"^com\.checkpoint\."#))
+    XCTAssertEqual(controller.exclusionPatterns.first?.pattern, #"^com\.checkpoint\."#)
+    XCTAssertEqual(controller.rule(for: "com.checkpoint.da.app"), .excluded)
+  }
+
+  @MainActor
+  func testEnablingApplicationRemovesItsGeneratedExclusion() throws {
+    let application = InstalledApplication(
+      bundleIdentifier: "com.example.editor",
+      name: "Editor",
+      url: URL(filePath: "/Applications/Editor.app"))
+    let manager = RecordingAppRuleManager()
+    let controller = AppRulesController(
+      inventory: FixedInventory([application]),
+      windowPicker: manager)
+
+    controller.refresh()
+    controller.setApplicationIncluded(false, for: application.bundleIdentifier)
+    controller.setApplicationIncluded(true, for: application.bundleIdentifier)
+
+    XCTAssertTrue(controller.exclusionPatterns.isEmpty)
+    XCTAssertEqual(controller.rule(for: application.bundleIdentifier), .included)
+  }
+
+  @MainActor
+  func testInvalidExclusionEditLeavesTheExistingPatternUntouched() throws {
+    let initialPattern = try XCTUnwrap(
+      AppExclusionPattern(pattern: #"^com\.checkpoint\."#))
+    let manager = RecordingAppRuleManager(patterns: [initialPattern])
+    let controller = AppRulesController(
+      inventory: EmptyInventory(),
+      windowPicker: manager)
+
+    controller.refresh()
+
+    XCTAssertFalse(controller.updateExclusionPattern(initialPattern, to: "["))
+    XCTAssertEqual(controller.exclusionPatterns, [initialPattern])
+  }
+
   private func makeWindow(
     id: CGWindowID,
     bundleIdentifier: String,
