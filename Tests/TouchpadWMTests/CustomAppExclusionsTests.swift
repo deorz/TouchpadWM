@@ -78,6 +78,21 @@ final class CustomAppExclusionsTests: XCTestCase {
       ["com.example.editor"])
   }
 
+  func testWindowPickerExposesCustomExclusionManagement() throws {
+    let defaults = makeDefaults()
+    let store = UserDefaultsAppRuleStore(defaults: defaults)
+    let controller = WindowPickerController(
+      service: FixedWindowService(windows: []),
+      ruleStore: store)
+    let pattern = try XCTUnwrap(AppExclusionPattern(pattern: #"^com\.checkpoint\."#))
+
+    controller.addExclusionPattern(pattern)
+    XCTAssertEqual(controller.exclusionPatterns(), [pattern])
+
+    controller.removeExclusionPattern(id: pattern.id)
+    XCTAssertEqual(controller.exclusionPatterns(), [])
+  }
+
   @MainActor
   func testControllerLoadsAddsAndRemovesCustomExclusions() throws {
     let initialPattern = try XCTUnwrap(AppExclusionPattern(pattern: #"^com\.checkpoint\."#))
