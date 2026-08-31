@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -170,32 +171,85 @@ private struct AppsSettingsView: View {
   let appRules: AppRulesController
 
   @State private var appSearch = ""
+  @State private var newExclusionPattern = ""
+  @State private var patternError: String?
   @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
     List {
-      ForEach(appRules.applications(matching: appSearch)) { application in
-        HStack(spacing: 12) {
-          Image(nsImage: iconCache.icon(for: application))
-            .resizable()
-            .frame(width: 32, height: 32)
+      Section("Custom Exclusions") {
+        HStack(spacing: 8) {
+          TextField("Bundle ID regex", text: $newExclusionPattern)
+            .textFieldStyle(.roundedBorder)
+            .onSubmit(addExclusionPattern)
 
-          VStack(alignment: .leading, spacing: 2) {
-            Text(application.name)
-            Text(application.bundleIdentifier)
-              .font(.caption)
-              .lineLimit(1)
-              .foregroundStyle(.secondary)
+          Button {
+            addExclusionPattern()
+          } label: {
+            Image(systemName: "plus")
           }
-
-          Spacer(minLength: 12)
-
-          Toggle("Include in Picker", isOn: pickerBinding(for: application))
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .accessibilityLabel("Include \(application.name) in Picker")
+          .buttonStyle(.borderless)
+          .disabled(
+            newExclusionPattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+          .accessibilityLabel("Add custom exclusion")
+          .help("Add custom exclusion")
         }
-        .padding(.vertical, 2)
+
+        if let patternError {
+          Text(patternError)
+            .font(.caption)
+            .foregroundStyle(.red)
+        }
+
+        ForEach(appRules.exclusionPatterns) { exclusion in
+          HStack(spacing: 8) {
+            Text(exclusion.pattern)
+              .font(.system(.body, design: .monospaced))
+              .lineLimit(1)
+
+            Spacer(minLength: 12)
+
+            Button {
+              appRules.removeExclusionPattern(exclusion)
+            } label: {
+              Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("Remove exclusion \(exclusion.pattern)")
+            .help("Remove exclusion")
+          }
+        }
+
+        Text("Patterns are matched against bundle identifiers. Example: ^com\\.checkpoint\\.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      Section("Applications") {
+        ForEach(appRules.applications(matching: appSearch)) { application in
+          HStack(spacing: 12) {
+            Image(nsImage: iconCache.icon(for: application))
+              .resizable()
+              .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+              Text(application.name)
+              Text(application.bundleIdentifier)
+                .font(.caption)
+                .lineLimit(1)
+                .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            Toggle("Include in Picker", isOn: pickerBinding(for: application))
+              .labelsHidden()
+              .toggleStyle(.switch)
+              .accessibilityLabel("Include \(application.name) in Picker")
+          }
+          .padding(.vertical, 2)
+        }
       }
     }
     .listStyle(.inset)
@@ -205,6 +259,9 @@ private struct AppsSettingsView: View {
       text: $appSearch,
       placement: .toolbar,
       prompt: "Search applications")
+    .onAppear {
+      appRules.refresh()
+    }
   }
 
   private func pickerBinding(for application: InstalledApplication) -> Binding<Bool> {
@@ -215,5 +272,15 @@ private struct AppsSettingsView: View {
           AppRule(includeInSwitcher: includeInSwitcher),
           for: application.bundleIdentifier)
       })
+  }
+
+  private func addExclusionPattern() {
+    guard appRules.addExclusionPattern(newExclusionPattern) else {
+      patternError = "Enter a valid, non-duplicate regular expression."
+      return
+    }
+
+    newExclusionPattern = ""
+    patternError = nil
   }
 }
