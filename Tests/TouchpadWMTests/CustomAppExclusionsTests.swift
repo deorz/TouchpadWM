@@ -92,13 +92,13 @@ final class CustomAppExclusionsTests: XCTestCase {
     XCTAssertTrue(controller.addExclusionPattern(#"^com\.example\."#))
     XCTAssertFalse(controller.addExclusionPattern(#"^com\.example\."#))
     XCTAssertFalse(controller.addExclusionPattern("["))
-    XCTAssertEqual(manager.exclusionPatterns.count, 2)
+    XCTAssertEqual(manager.storedPatterns.count, 2)
 
     controller.removeExclusionPattern(initialPattern)
 
     XCTAssertEqual(controller.exclusionPatterns.count, 1)
-    XCTAssertEqual(manager.exclusionPatterns.count, 1)
-    XCTAssertEqual(manager.exclusionPatterns.first?.pattern, #"^com\.example\."#)
+    XCTAssertEqual(manager.storedPatterns.count, 1)
+    XCTAssertEqual(manager.storedPatterns.first?.pattern, #"^com\.example\."#)
   }
 
   private func makeWindow(
@@ -134,17 +134,17 @@ private struct EmptyInventory: ApplicationInventorying {
 
 private final class RecordingAppRuleManager: AppRuleManaging {
   private(set) var rules: [String: AppRule] = [:]
-  private(set) var exclusionPatterns: [AppExclusionPattern]
+  private(set) var storedPatterns: [AppExclusionPattern]
 
   init(patterns: [AppExclusionPattern] = []) {
-    exclusionPatterns = patterns
+    storedPatterns = patterns
   }
 
   func rule(for bundleIdentifier: String) -> AppRule {
     if let rule = rules[bundleIdentifier] {
       return rule
     }
-    return exclusionPatterns.contains(where: { $0.matches(bundleIdentifier) })
+    return storedPatterns.contains(where: { $0.matches(bundleIdentifier) })
       ? .excluded
       : .included
   }
@@ -154,15 +154,15 @@ private final class RecordingAppRuleManager: AppRuleManaging {
   }
 
   func exclusionPatterns() -> [AppExclusionPattern] {
-    exclusionPatterns
+    storedPatterns
   }
 
   func addExclusionPattern(_ pattern: AppExclusionPattern) {
-    exclusionPatterns.append(pattern)
+    storedPatterns.append(pattern)
   }
 
   func removeExclusionPattern(id: UUID) {
-    exclusionPatterns.removeAll { $0.id == id }
+    storedPatterns.removeAll { $0.id == id }
   }
 }
 
