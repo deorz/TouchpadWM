@@ -231,7 +231,7 @@ final class CustomAppExclusionsTests: XCTestCase {
     let name = "CustomAppExclusionsTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: name)!
     addTeardownBlock {
-      defaults.removePersistentDomain(forName: name)
+      UserDefaults(suiteName: name)?.removePersistentDomain(forName: name)
     }
     return defaults
   }
