@@ -32,7 +32,6 @@ final class ApplicationInventoryTests: XCTestCase {
     XCTAssertEqual(applications.first?.url.lastPathComponent, "Editor.app")
   }
 
-
   func testStandardRootsIncludeSystemApplicationSupport() {
     XCTAssertTrue(
       ApplicationInventory.standardRoots.contains(
