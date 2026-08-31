@@ -152,13 +152,13 @@ final class CustomAppExclusionsTests: XCTestCase {
     XCTAssertEqual(manager.storedPatterns.first?.pattern, #"^com\.example\."#)
   }
 
-
   @MainActor
   func testDisablingApplicationAddsAnExactEditableExclusion() throws {
     let application = InstalledApplication(
       bundleIdentifier: "com.checkpoint.EPWebGUI",
       name: "Endpoint Security",
-      url: URL(filePath: "/Library/Application Support/Checkpoint/Endpoint Security/Endpoint Security.app"))
+      url: URL(
+        filePath: "/Library/Application Support/Checkpoint/Endpoint Security/Endpoint Security.app"))
     let manager = RecordingAppRuleManager()
     let controller = AppRulesController(
       inventory: FixedInventory([application]),
