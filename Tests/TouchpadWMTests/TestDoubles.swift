@@ -28,6 +28,10 @@ final class InMemoryAppRuleStore: AppRuleStoring {
     rules[bundleIdentifier] = rule
   }
 
+  func removeRule(for bundleIdentifier: String) {
+    rules.removeValue(forKey: bundleIdentifier)
+  }
+
   func exclusionPatterns() -> [AppExclusionPattern] {
     storedExclusionPatterns
   }
@@ -37,6 +41,13 @@ final class InMemoryAppRuleStore: AppRuleStoring {
       return
     }
     storedExclusionPatterns.append(pattern)
+  }
+
+  func updateExclusionPattern(_ pattern: AppExclusionPattern) {
+    guard let index = storedExclusionPatterns.firstIndex(where: { $0.id == pattern.id }) else {
+      return
+    }
+    storedExclusionPatterns[index] = pattern
   }
 
   func removeExclusionPattern(id: UUID) {
