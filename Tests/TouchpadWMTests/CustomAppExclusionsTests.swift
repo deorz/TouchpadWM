@@ -55,6 +55,42 @@ final class CustomAppExclusionsTests: XCTestCase {
     XCTAssertEqual(store.rule(for: "com.checkpoint.EPWebGUI"), .included)
   }
 
+
+  func testEditingCustomExclusionPersistsWithTheSameIdentity() throws {
+    let defaults = makeDefaults()
+    let firstStore = UserDefaultsAppRuleStore(defaults: defaults)
+    let initialPattern = try XCTUnwrap(
+      AppExclusionPattern(pattern: #"^com\.checkpoint\."#))
+    firstStore.addExclusionPattern(initialPattern)
+
+    let updatedPattern = try XCTUnwrap(
+      AppExclusionPattern(
+        id: initialPattern.id,
+        pattern: #"^com\.checkpoint\..*$"#,
+        sourceBundleIdentifier: initialPattern.sourceBundleIdentifier))
+    firstStore.updateExclusionPattern(updatedPattern)
+
+    let secondStore = UserDefaultsAppRuleStore(defaults: defaults)
+
+    XCTAssertEqual(secondStore.exclusionPatterns(), [updatedPattern])
+    XCTAssertEqual(
+      secondStore.rule(for: "com.checkpoint.EPWebGUI"),
+      .excluded)
+  }
+
+  func testRemovingAnExactRuleRestoresPatternEvaluation() throws {
+    let defaults = makeDefaults()
+    let store = UserDefaultsAppRuleStore(defaults: defaults)
+    let applicationID = "com.example.editor"
+
+    store.setRule(.excluded, for: applicationID)
+    XCTAssertEqual(store.rule(for: applicationID), .excluded)
+
+    store.removeRule(for: applicationID)
+
+    XCTAssertEqual(store.rule(for: applicationID), .included)
+  }
+
   func testWindowPickerAppliesCustomExclusionToRuntimeWindowOwner() throws {
     let defaults = makeDefaults()
     let store = UserDefaultsAppRuleStore(defaults: defaults)
