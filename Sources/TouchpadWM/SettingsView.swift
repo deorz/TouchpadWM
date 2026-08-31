@@ -192,7 +192,8 @@ private struct AppsSettingsView: View {
           .disabled(
             newExclusionPattern
               .trimmingCharacters(in: .whitespacesAndNewlines)
-              .isEmpty)
+              .isEmpty
+          )
           .accessibilityLabel("Add custom exclusion")
           .help("Add custom exclusion")
         }
