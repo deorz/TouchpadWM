@@ -32,6 +32,12 @@ final class ApplicationInventoryTests: XCTestCase {
     XCTAssertEqual(applications.first?.url.lastPathComponent, "Editor.app")
   }
 
+  func testStandardRootsIncludeSystemApplicationSupport() {
+    XCTAssertTrue(
+      ApplicationInventory.standardRoots.contains(
+        URL(filePath: "/Library/Application Support")))
+  }
+
   func testInventoryIncludesAnExplicitAdditionalApplication() throws {
     let root = try makeTemporaryDirectory()
     let finder = root.appending(path: "Finder.app")

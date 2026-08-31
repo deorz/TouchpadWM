@@ -1,3 +1,5 @@
+import Foundation
+
 protocol AccessibilityWindowServicing: AnyObject {
   func refreshWindows() -> [CataloguedWindow]
   func focusedWindowID() -> WindowID?
@@ -13,6 +15,11 @@ protocol SwitcherWindowSourcing: AnyObject {
 protocol AppRuleManaging: AnyObject {
   func rule(for bundleIdentifier: String) -> AppRule
   func setRule(_ rule: AppRule, for bundleIdentifier: String)
+  func removeRule(for bundleIdentifier: String)
+  func exclusionPatterns() -> [AppExclusionPattern]
+  func addExclusionPattern(_ pattern: AppExclusionPattern)
+  func updateExclusionPattern(_ pattern: AppExclusionPattern)
+  func removeExclusionPattern(id: UUID)
 }
 
 final class WindowPickerController: SwitcherWindowSourcing, AppRuleManaging {
@@ -50,6 +57,26 @@ final class WindowPickerController: SwitcherWindowSourcing, AppRuleManaging {
 
   func setRule(_ rule: AppRule, for bundleIdentifier: String) {
     ruleStore.setRule(rule, for: bundleIdentifier)
+  }
+
+  func removeRule(for bundleIdentifier: String) {
+    ruleStore.removeRule(for: bundleIdentifier)
+  }
+
+  func exclusionPatterns() -> [AppExclusionPattern] {
+    ruleStore.exclusionPatterns()
+  }
+
+  func addExclusionPattern(_ pattern: AppExclusionPattern) {
+    ruleStore.addExclusionPattern(pattern)
+  }
+
+  func updateExclusionPattern(_ pattern: AppExclusionPattern) {
+    ruleStore.updateExclusionPattern(pattern)
+  }
+
+  func removeExclusionPattern(id: UUID) {
+    ruleStore.removeExclusionPattern(id: id)
   }
 
   private func refreshCatalogue() {

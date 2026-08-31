@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -170,32 +171,81 @@ private struct AppsSettingsView: View {
   let appRules: AppRulesController
 
   @State private var appSearch = ""
+  @State private var newExclusionPattern = ""
+  @State private var patternError: String?
   @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
     List {
-      ForEach(appRules.applications(matching: appSearch)) { application in
-        HStack(spacing: 12) {
-          Image(nsImage: iconCache.icon(for: application))
-            .resizable()
-            .frame(width: 32, height: 32)
+      Section("Custom Exclusions") {
+        HStack(spacing: 8) {
+          TextField("Bundle ID regex", text: $newExclusionPattern)
+            .textFieldStyle(.roundedBorder)
+            .onSubmit(addExclusionPattern)
 
-          VStack(alignment: .leading, spacing: 2) {
-            Text(application.name)
-            Text(application.bundleIdentifier)
-              .font(.caption)
-              .lineLimit(1)
-              .foregroundStyle(.secondary)
+          Button {
+            addExclusionPattern()
+          } label: {
+            Image(systemName: "plus")
           }
-
-          Spacer(minLength: 12)
-
-          Toggle("Include in Picker", isOn: pickerBinding(for: application))
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .accessibilityLabel("Include \(application.name) in Picker")
+          .buttonStyle(.borderless)
+          .disabled(
+            newExclusionPattern
+              .trimmingCharacters(in: .whitespacesAndNewlines)
+              .isEmpty
+          )
+          .accessibilityLabel("Add custom exclusion")
+          .help("Add custom exclusion")
         }
-        .padding(.vertical, 2)
+
+        if let patternError {
+          Text(patternError)
+            .font(.caption)
+            .foregroundStyle(.red)
+        }
+
+        ForEach(appRules.exclusionPatterns) { exclusion in
+          ExclusionPatternRow(appRules: appRules, pattern: exclusion)
+        }
+
+        Text(
+          "Use + to add an editable exact regex. "
+            + "Patterns match bundle identifiers case-insensitively. "
+            + "Example: ^com\\.checkpoint\\."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
+
+      Section("Applications") {
+        ForEach(appRules.applications(matching: appSearch)) { application in
+          HStack(spacing: 12) {
+            Image(nsImage: iconCache.icon(for: application))
+              .resizable()
+              .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+              Text(application.name)
+              Text(application.bundleIdentifier)
+                .font(.caption)
+                .lineLimit(1)
+                .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            Button {
+              appRules.addApplicationExclusion(for: application.bundleIdentifier)
+            } label: {
+              Image(systemName: "plus")
+            }
+            .buttonStyle(.borderless)
+            .disabled(appRules.hasApplicationExclusion(for: application.bundleIdentifier))
+            .accessibilityLabel("Add \(application.name) to Picker exclusions")
+            .help("Add an exact bundle ID regex to exclusions")
+          }
+          .padding(.vertical, 2)
+        }
       }
     }
     .listStyle(.inset)
@@ -204,16 +254,86 @@ private struct AppsSettingsView: View {
     .searchable(
       text: $appSearch,
       placement: .toolbar,
-      prompt: "Search applications")
+      prompt: "Search applications"
+    )
+    .onAppear {
+      appRules.refresh()
+    }
   }
 
-  private func pickerBinding(for application: InstalledApplication) -> Binding<Bool> {
-    Binding(
-      get: { appRules.rule(for: application.bundleIdentifier).includeInSwitcher },
-      set: { includeInSwitcher in
-        appRules.setRule(
-          AppRule(includeInSwitcher: includeInSwitcher),
-          for: application.bundleIdentifier)
-      })
+  private func addExclusionPattern() {
+    guard appRules.addExclusionPattern(newExclusionPattern) else {
+      patternError = "Enter a valid, non-duplicate regular expression."
+      return
+    }
+
+    newExclusionPattern = ""
+    patternError = nil
+  }
+}
+
+@MainActor
+private struct ExclusionPatternRow: View {
+  let appRules: AppRulesController
+  let pattern: AppExclusionPattern
+
+  @State private var draft: String
+  @State private var errorMessage: String?
+
+  init(appRules: AppRulesController, pattern: AppExclusionPattern) {
+    self.appRules = appRules
+    self.pattern = pattern
+    _draft = State(initialValue: pattern.pattern)
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack(spacing: 8) {
+        TextField("Bundle ID regex", text: $draft)
+          .font(.system(.body, design: .monospaced))
+          .textFieldStyle(.roundedBorder)
+          .onSubmit(save)
+
+        Button {
+          save()
+        } label: {
+          Image(systemName: "checkmark")
+        }
+        .buttonStyle(.borderless)
+        .disabled(draft == currentPattern)
+        .accessibilityLabel("Save exclusion")
+        .help("Save exclusion")
+
+        Button {
+          appRules.removeExclusionPattern(pattern)
+        } label: {
+          Image(systemName: "trash")
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .accessibilityLabel("Remove exclusion")
+        .help("Remove exclusion")
+      }
+
+      if let errorMessage {
+        Text(errorMessage)
+          .font(.caption)
+          .foregroundStyle(.red)
+      }
+    }
+  }
+
+  private var currentPattern: String {
+    appRules.exclusionPatterns.first(where: { $0.id == pattern.id })?.pattern
+      ?? pattern.pattern
+  }
+
+  private func save() {
+    guard appRules.updateExclusionPattern(pattern, to: draft) else {
+      errorMessage = "Enter a valid, non-duplicate regular expression."
+      return
+    }
+
+    errorMessage = nil
   }
 }

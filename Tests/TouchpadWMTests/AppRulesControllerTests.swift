@@ -76,12 +76,41 @@ private struct FixedInventory: ApplicationInventorying {
 
 private final class FakeAppRuleManager: AppRuleManaging {
   private(set) var rules: [String: AppRule] = [:]
+  private var storedPatterns: [AppExclusionPattern] = []
 
   func rule(for bundleIdentifier: String) -> AppRule {
-    rules[bundleIdentifier] ?? .included
+    if let rule = rules[bundleIdentifier] {
+      return rule
+    }
+    return storedPatterns.contains(where: { $0.matches(bundleIdentifier) })
+      ? .excluded
+      : .included
   }
 
   func setRule(_ rule: AppRule, for bundleIdentifier: String) {
     rules[bundleIdentifier] = rule
+  }
+
+  func removeRule(for bundleIdentifier: String) {
+    rules.removeValue(forKey: bundleIdentifier)
+  }
+
+  func exclusionPatterns() -> [AppExclusionPattern] {
+    storedPatterns
+  }
+
+  func addExclusionPattern(_ pattern: AppExclusionPattern) {
+    storedPatterns.append(pattern)
+  }
+
+  func updateExclusionPattern(_ pattern: AppExclusionPattern) {
+    guard let index = storedPatterns.firstIndex(where: { $0.id == pattern.id }) else {
+      return
+    }
+    storedPatterns[index] = pattern
+  }
+
+  func removeExclusionPattern(id: UUID) {
+    storedPatterns.removeAll { $0.id == id }
   }
 }

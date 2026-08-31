@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 @MainActor
@@ -6,6 +7,7 @@ final class AppRulesController {
   private let inventory: any ApplicationInventorying
   private let windowPicker: any AppRuleManaging
   private(set) var applications: [InstalledApplication] = []
+  private(set) var exclusionPatterns: [AppExclusionPattern] = []
   private var rules: [String: AppRule] = [:]
 
   init(
@@ -18,6 +20,8 @@ final class AppRulesController {
 
   func refresh() {
     applications = inventory.installedApplications()
+    exclusionPatterns = windowPicker.exclusionPatterns()
+    rules.removeAll()
   }
 
   func applications(matching query: String) -> [InstalledApplication] {
@@ -37,5 +41,91 @@ final class AppRulesController {
   func setRule(_ rule: AppRule, for bundleIdentifier: String) {
     rules[bundleIdentifier] = rule
     windowPicker.setRule(rule, for: bundleIdentifier)
+  }
+
+  func hasApplicationExclusion(for bundleIdentifier: String) -> Bool {
+    guard let exactPattern = AppExclusionPattern(exactBundleIdentifier: bundleIdentifier) else {
+      return false
+    }
+
+    return exclusionPatterns.contains {
+      $0.sourceBundleIdentifier == bundleIdentifier
+        || $0.pattern == exactPattern.pattern
+    }
+  }
+
+  @discardableResult
+  func addApplicationExclusion(for bundleIdentifier: String) -> Bool {
+    guard
+      let exactPattern = AppExclusionPattern(exactBundleIdentifier: bundleIdentifier),
+      !hasApplicationExclusion(for: bundleIdentifier)
+    else {
+      return false
+    }
+
+    rules.removeValue(forKey: bundleIdentifier)
+    windowPicker.removeRule(for: bundleIdentifier)
+    return addExclusionPattern(exactPattern)
+  }
+
+  @discardableResult
+  func addExclusionPattern(_ pattern: String) -> Bool {
+    let normalizedPattern = pattern.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let exclusionPattern = AppExclusionPattern(pattern: normalizedPattern) else {
+      return false
+    }
+
+    return addExclusionPattern(exclusionPattern)
+  }
+
+  @discardableResult
+  private func addExclusionPattern(_ pattern: AppExclusionPattern) -> Bool {
+    guard
+      pattern.isValid,
+      !exclusionPatterns.contains(where: { $0.pattern == pattern.pattern })
+    else {
+      return false
+    }
+
+    exclusionPatterns.append(pattern)
+    windowPicker.addExclusionPattern(pattern)
+    return true
+  }
+
+  @discardableResult
+  func updateExclusionPattern(
+    _ pattern: AppExclusionPattern,
+    to newPattern: String
+  ) -> Bool {
+    let normalizedPattern = newPattern.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let index = exclusionPatterns.firstIndex(where: { $0.id == pattern.id }) else {
+      return false
+    }
+
+    let currentPattern = exclusionPatterns[index]
+    guard
+      let updatedPattern = AppExclusionPattern(
+        id: currentPattern.id,
+        pattern: normalizedPattern,
+        sourceBundleIdentifier: currentPattern.sourceBundleIdentifier),
+      !exclusionPatterns.contains(where: {
+        $0.id != currentPattern.id && $0.pattern == updatedPattern.pattern
+      })
+    else {
+      return false
+    }
+
+    exclusionPatterns[index] = updatedPattern
+    windowPicker.updateExclusionPattern(updatedPattern)
+    return true
+  }
+
+  func removeExclusionPattern(_ pattern: AppExclusionPattern) {
+    guard exclusionPatterns.contains(where: { $0.id == pattern.id }) else {
+      return
+    }
+
+    exclusionPatterns.removeAll { $0.id == pattern.id }
+    windowPicker.removeExclusionPattern(id: pattern.id)
   }
 }
