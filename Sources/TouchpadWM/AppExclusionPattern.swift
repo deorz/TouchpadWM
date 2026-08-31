@@ -2,9 +2,14 @@ import Foundation
 
 struct AppExclusionPattern: Codable, Equatable, Identifiable {
   let id: UUID
-  let pattern: String
+  var pattern: String
+  let sourceBundleIdentifier: String?
 
-  init?(pattern: String) {
+  init?(
+    id: UUID = UUID(),
+    pattern: String,
+    sourceBundleIdentifier: String? = nil
+  ) {
     guard
       !pattern.isEmpty,
       (try? NSRegularExpression(pattern: pattern)) != nil
@@ -12,8 +17,19 @@ struct AppExclusionPattern: Codable, Equatable, Identifiable {
       return nil
     }
 
-    self.id = UUID()
+    self.id = id
     self.pattern = pattern
+    self.sourceBundleIdentifier = sourceBundleIdentifier
+  }
+
+  init?(exactBundleIdentifier: String) {
+    guard !exactBundleIdentifier.isEmpty else {
+      return nil
+    }
+
+    self.init(
+      pattern: "^\(NSRegularExpression.escapedPattern(for: exactBundleIdentifier))$",
+      sourceBundleIdentifier: exactBundleIdentifier)
   }
 
   var isValid: Bool {
