@@ -152,7 +152,7 @@ final class CustomAppExclusionsTests: XCTestCase {
   }
 
   @MainActor
-  func testDisablingApplicationAddsAnExactEditableExclusion() throws {
+  func testAddingApplicationAddsAnExactEditableExclusion() throws {
     let application = InstalledApplication(
       bundleIdentifier: "com.checkpoint.EPWebGUI",
       name: "Endpoint Security",
@@ -163,7 +163,8 @@ final class CustomAppExclusionsTests: XCTestCase {
       windowPicker: manager)
 
     controller.refresh()
-    controller.setApplicationIncluded(false, for: application.bundleIdentifier)
+    XCTAssertTrue(controller.addApplicationExclusion(for: application.bundleIdentifier))
+    XCTAssertTrue(controller.hasApplicationExclusion(for: application.bundleIdentifier))
 
     let generatedPattern = try XCTUnwrap(controller.exclusionPatterns.first)
     XCTAssertEqual(generatedPattern.pattern, #"^com\.checkpoint\.EPWebGUI$"#)
@@ -179,7 +180,7 @@ final class CustomAppExclusionsTests: XCTestCase {
   }
 
   @MainActor
-  func testEnablingApplicationRemovesItsGeneratedExclusion() throws {
+  func testRemovingApplicationExclusionMakesTheAddActionAvailableAgain() throws {
     let application = InstalledApplication(
       bundleIdentifier: "com.example.editor",
       name: "Editor",
@@ -190,11 +191,15 @@ final class CustomAppExclusionsTests: XCTestCase {
       windowPicker: manager)
 
     controller.refresh()
-    controller.setApplicationIncluded(false, for: application.bundleIdentifier)
-    controller.setApplicationIncluded(true, for: application.bundleIdentifier)
+    XCTAssertTrue(controller.addApplicationExclusion(for: application.bundleIdentifier))
+    XCTAssertFalse(controller.addApplicationExclusion(for: application.bundleIdentifier))
+    XCTAssertTrue(controller.hasApplicationExclusion(for: application.bundleIdentifier))
 
-    XCTAssertTrue(controller.exclusionPatterns.isEmpty)
-    XCTAssertEqual(controller.rule(for: application.bundleIdentifier), .included)
+    let generatedPattern = try XCTUnwrap(controller.exclusionPatterns.first)
+    controller.removeExclusionPattern(generatedPattern)
+
+    XCTAssertFalse(controller.hasApplicationExclusion(for: application.bundleIdentifier))
+    XCTAssertTrue(controller.addApplicationExclusion(for: application.bundleIdentifier))
   }
 
   @MainActor
