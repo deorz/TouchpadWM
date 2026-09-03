@@ -59,17 +59,34 @@ enum HapticFeedbackStrength: String, CaseIterable, Codable, Equatable {
   }
 }
 
-enum PickerTrigger: Int, CaseIterable, Codable, Equatable {
-  case threeFingers = 3
-  case fourFingers = 4
-  case fiveFingers = 5
+enum PickerActivation: String, CaseIterable, Codable, Equatable {
+  case touch
+  case swipeUp
+  case swipeDown
+
+  var label: String {
+    switch self {
+    case .touch:
+      "Touch"
+    case .swipeUp:
+      "Swipe up"
+    case .swipeDown:
+      "Swipe down"
+    }
+  }
+}
+
+enum PickerFingerCount: Int, CaseIterable, Codable, Equatable {
+  case three = 3
+  case four = 4
+  case five = 5
 
   var fingerCount: Int {
     rawValue
   }
 
   var label: String {
-    "Touch with \(rawValue) fingers"
+    "\(rawValue) fingers"
   }
 }
 
@@ -78,7 +95,9 @@ final class GesturePreferences {
   private enum Key {
     static let sensitivity = "gestureSensitivity"
     static let hapticStrength = "gestureHapticStrength"
-    static let pickerTrigger = "pickerTrigger"
+    static let pickerActivation = "pickerActivation"
+    static let pickerFingerCount = "pickerTrigger"
+    static let activationSensitivity = "activationSensitivity"
   }
 
   private let defaults: UserDefaults
@@ -86,7 +105,9 @@ final class GesturePreferences {
     self.defaults = defaults
     sensitivity = Self.sensitivity(from: defaults)
     hapticStrength = Self.hapticStrength(from: defaults)
-    pickerTrigger = Self.pickerTrigger(from: defaults)
+    pickerActivation = Self.pickerActivation(from: defaults)
+    pickerFingerCount = Self.pickerFingerCount(from: defaults)
+    activationSensitivity = Self.activationSensitivity(from: defaults)
   }
 
   var sensitivity: GestureSensitivity {
@@ -101,9 +122,21 @@ final class GesturePreferences {
     }
   }
 
-  var pickerTrigger: PickerTrigger {
+  var pickerActivation: PickerActivation {
     didSet {
-      defaults.set(pickerTrigger.rawValue, forKey: Key.pickerTrigger)
+      defaults.set(pickerActivation.rawValue, forKey: Key.pickerActivation)
+    }
+  }
+
+  var pickerFingerCount: PickerFingerCount {
+    didSet {
+      defaults.set(pickerFingerCount.rawValue, forKey: Key.pickerFingerCount)
+    }
+  }
+
+  var activationSensitivity: GestureSensitivity {
+    didSet {
+      defaults.set(activationSensitivity.rawValue, forKey: Key.activationSensitivity)
     }
   }
 
@@ -125,11 +158,29 @@ final class GesturePreferences {
     return value
   }
 
-  private static func pickerTrigger(from defaults: UserDefaults) -> PickerTrigger {
-    guard let rawValue = defaults.object(forKey: Key.pickerTrigger) as? Int,
-      let value = PickerTrigger(rawValue: rawValue)
+  private static func pickerActivation(from defaults: UserDefaults) -> PickerActivation {
+    guard let rawValue = defaults.string(forKey: Key.pickerActivation),
+      let value = PickerActivation(rawValue: rawValue)
     else {
-      return .threeFingers
+      return .touch
+    }
+    return value
+  }
+
+  private static func pickerFingerCount(from defaults: UserDefaults) -> PickerFingerCount {
+    guard let rawValue = defaults.object(forKey: Key.pickerFingerCount) as? Int,
+      let value = PickerFingerCount(rawValue: rawValue)
+    else {
+      return .three
+    }
+    return value
+  }
+
+  private static func activationSensitivity(from defaults: UserDefaults) -> GestureSensitivity {
+    guard let rawValue = defaults.object(forKey: Key.activationSensitivity) as? Int,
+      let value = GestureSensitivity(rawValue: rawValue)
+    else {
+      return .medium
     }
     return value
   }

@@ -9,7 +9,9 @@ final class GesturePreferencesTests: XCTestCase {
 
     XCTAssertEqual(preferences.sensitivity, .medium)
     XCTAssertEqual(preferences.hapticStrength, .standard)
-    XCTAssertEqual(preferences.pickerTrigger, .threeFingers)
+    XCTAssertEqual(preferences.pickerActivation, .touch)
+    XCTAssertEqual(preferences.pickerFingerCount, .three)
+    XCTAssertEqual(preferences.activationSensitivity, .medium)
   }
 
   func testPreferencesPersistAcrossStoreInstances() {
@@ -17,13 +19,17 @@ final class GesturePreferencesTests: XCTestCase {
     let first = GesturePreferences(defaults: defaults)
     first.sensitivity = .lowest
     first.hapticStrength = .light
-    first.pickerTrigger = .fiveFingers
+    first.pickerActivation = .swipeDown
+    first.pickerFingerCount = .five
+    first.activationSensitivity = .highest
 
     let second = GesturePreferences(defaults: defaults)
 
     XCTAssertEqual(second.sensitivity, .lowest)
     XCTAssertEqual(second.hapticStrength, .light)
-    XCTAssertEqual(second.pickerTrigger, .fiveFingers)
+    XCTAssertEqual(second.pickerActivation, .swipeDown)
+    XCTAssertEqual(second.pickerFingerCount, .five)
+    XCTAssertEqual(second.activationSensitivity, .highest)
   }
 
   func testSensitivityPointsMapToIncreasingMovementMultipliers() {
@@ -39,23 +45,27 @@ final class GesturePreferencesTests: XCTestCase {
     XCTAssertEqual(
       HapticFeedbackStrength.allCases.map(\.label),
       ["Off", "Light", "Standard", "Strong"])
-    XCTAssertEqual(PickerTrigger.allCases.map(\.fingerCount), [3, 4, 5])
+    XCTAssertEqual(PickerActivation.allCases.map(\.label), ["Touch", "Swipe up", "Swipe down"])
     XCTAssertEqual(
-      PickerTrigger.allCases.map(\.label),
-      ["Touch with 3 fingers", "Touch with 4 fingers", "Touch with 5 fingers"])
+      PickerFingerCount.allCases.map(\.label),
+      ["3 fingers", "4 fingers", "5 fingers"])
   }
 
   func testInvalidStoredValuesFallBackToSafeDefaults() {
     let defaults = makeDefaults()
     defaults.set(99, forKey: "gestureSensitivity")
     defaults.set("invalid", forKey: "gestureHapticStrength")
+    defaults.set("invalid", forKey: "pickerActivation")
     defaults.set(2, forKey: "pickerTrigger")
+    defaults.set(99, forKey: "activationSensitivity")
 
     let preferences = GesturePreferences(defaults: defaults)
 
     XCTAssertEqual(preferences.sensitivity, .medium)
     XCTAssertEqual(preferences.hapticStrength, .standard)
-    XCTAssertEqual(preferences.pickerTrigger, .threeFingers)
+    XCTAssertEqual(preferences.pickerActivation, .touch)
+    XCTAssertEqual(preferences.pickerFingerCount, .three)
+    XCTAssertEqual(preferences.activationSensitivity, .medium)
   }
 
   func testChangingPreferenceProducesAnObservationUpdate() {

@@ -12,11 +12,11 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
 
   func testConfiguredFingerCountsOpenTheSwitcher() {
     for (trigger, count) in [
-      (PickerTrigger.threeFingers, 3),
-      (PickerTrigger.fourFingers, 4),
-      (PickerTrigger.fiveFingers, 5),
+      (PickerFingerCount.three, 3),
+      (PickerFingerCount.four, 4),
+      (PickerFingerCount.five, 5),
     ] {
-      var recognizer = SwitcherGestureRecognizer(trigger: trigger)
+      var recognizer = SwitcherGestureRecognizer(fingerCount: trigger)
 
       XCTAssertEqual(
         recognizer.consume(frame(count: count, y: 0.5)),
@@ -26,7 +26,7 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
   }
 
   func testConfiguredFingerCountIgnoresOtherContactCounts() {
-    var recognizer = SwitcherGestureRecognizer(trigger: .fourFingers)
+    var recognizer = SwitcherGestureRecognizer(fingerCount: .four)
 
     XCTAssertEqual(recognizer.consume(frame(count: 3, y: 0.5)), [])
     XCTAssertEqual(recognizer.consume(frame(count: 5, y: 0.5)), [])
@@ -52,7 +52,11 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
 
   func testUpdatingConfigurationAppliesToTheNextGesture() {
     var recognizer = SwitcherGestureRecognizer()
-    recognizer.update(trigger: .fiveFingers, sensitivity: .highest)
+    recognizer.update(
+      activation: .touch,
+      fingerCount: .five,
+      activationSensitivity: .medium,
+      sensitivity: .highest)
 
     XCTAssertEqual(recognizer.consume(frame(count: 5, y: 0.5)), [.openSwitcher])
   }
@@ -60,7 +64,11 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
   func testKeepingTheSameConfigurationDoesNotResetAnActiveGesture() {
     var recognizer = SwitcherGestureRecognizer()
     _ = recognizer.consume(frame(y: 0.5))
-    recognizer.update(trigger: .threeFingers, sensitivity: .medium)
+    recognizer.update(
+      activation: .touch,
+      fingerCount: .three,
+      activationSensitivity: .medium,
+      sensitivity: .medium)
 
     XCTAssertEqual(
       recognizer.consume(frame(y: 0.5 + SwitcherGestureRecognizer.rowDistance)),
@@ -150,6 +158,75 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
     _ = recognizer.consume(frame(y: 0.5))
 
     XCTAssertEqual(recognizer.consume(frame(ids: [1, 2], y: 0.5)), [.activateSwitcherSelection])
+  }
+
+  func testSwipeUpOpensTheSwitcherOnlyAfterCrossingTheActivationDistance() {
+    var recognizer = SwitcherGestureRecognizer(activation: .swipeUp)
+
+    XCTAssertEqual(recognizer.consume(frame(y: 0.5)), [])
+    XCTAssertEqual(
+      recognizer.consume(frame(y: 0.5 + SwitcherGestureRecognizer.activationDistance / 2)), [])
+    XCTAssertEqual(
+      recognizer.consume(frame(y: 0.5 + SwitcherGestureRecognizer.activationDistance)),
+      [.openSwitcher])
+  }
+
+  func testSwipeDownOpensTheSwitcherOnlyAfterCrossingTheActivationDistance() {
+    var recognizer = SwitcherGestureRecognizer(activation: .swipeDown)
+
+    XCTAssertEqual(recognizer.consume(frame(y: 0.5)), [])
+    XCTAssertEqual(
+      recognizer.consume(frame(y: 0.5 - SwitcherGestureRecognizer.activationDistance / 2)), [])
+    XCTAssertEqual(
+      recognizer.consume(frame(y: 0.5 - SwitcherGestureRecognizer.activationDistance)),
+      [.openSwitcher])
+  }
+
+  func testSwipeActivationPreservesSelectionNavigationForLaterMovement() {
+    var recognizer = SwitcherGestureRecognizer(activation: .swipeUp)
+    _ = recognizer.consume(frame(y: 0.5))
+
+    XCTAssertEqual(
+      recognizer.consume(frame(y: 0.5 + SwitcherGestureRecognizer.activationDistance)),
+      [.openSwitcher])
+    XCTAssertEqual(
+      recognizer.consume(
+        frame(
+          y: 0.5 + SwitcherGestureRecognizer.activationDistance
+            + SwitcherGestureRecognizer.rowDistance)),
+      [.moveSwitcherSelection(.previous)])
+  }
+
+  func testSwipeInTheOppositeDirectionDoesNotOpenTheSwitcher() {
+    var recognizer = SwitcherGestureRecognizer(activation: .swipeUp)
+    _ = recognizer.consume(frame(y: 0.5))
+
+    XCTAssertEqual(
+      recognizer.consume(frame(y: 0.5 - SwitcherGestureRecognizer.activationDistance)), [])
+    XCTAssertEqual(recognizer.consume(frame(ids: [1, 2], y: 0.5)), [])
+  }
+
+  func testHigherActivationSensitivityOpensWithMovementThatDoesNotOpenAtLowerSensitivity() {
+    var highSensitivity = SwitcherGestureRecognizer(
+      activation: .swipeUp,
+      activationSensitivity: .highest)
+    var lowSensitivity = SwitcherGestureRecognizer(
+      activation: .swipeUp,
+      activationSensitivity: .lowest)
+
+    _ = highSensitivity.consume(frame(y: 0.5))
+    _ = lowSensitivity.consume(frame(y: 0.5))
+
+    XCTAssertEqual(highSensitivity.consume(frame(y: 0.608)), [.openSwitcher])
+    XCTAssertEqual(lowSensitivity.consume(frame(y: 0.608)), [])
+  }
+
+  func testUntriggeredSwipeDoesNotActivateThePickerWhenFingersLift() {
+    var recognizer = SwitcherGestureRecognizer(activation: .swipeUp)
+
+    _ = recognizer.consume(frame(y: 0.5))
+
+    XCTAssertEqual(recognizer.consume(frame(ids: [1, 2], y: 0.5)), [])
   }
 
   private func frame(count: Int = 3, y: Float) -> TouchFrame {
