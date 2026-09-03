@@ -71,10 +71,32 @@ private struct GesturesSettingsView: View {
   var body: some View {
     Form {
       Section("Picker") {
-        Picker("Open picker with", selection: pickerTriggerBinding) {
-          ForEach(PickerTrigger.allCases, id: \.self) { trigger in
-            Text(trigger.label).tag(trigger)
+        Picker("Open picker with", selection: pickerActivationBinding) {
+          ForEach(PickerActivation.allCases, id: \.self) { activation in
+            Text(activation.label).tag(activation)
           }
+        }
+
+        Picker("Finger count", selection: pickerFingerCountBinding) {
+          ForEach(PickerFingerCount.allCases, id: \.self) { count in
+            Text(count.label).tag(count)
+          }
+        }
+
+        VStack(alignment: .leading, spacing: 8) {
+          Slider(
+            value: activationSensitivityBinding,
+            in: 0...Double(GestureSensitivity.allCases.count - 1),
+            step: 1,
+            label: { Text("Activation sensitivity") },
+            minimumValueLabel: { Text("Less") },
+            maximumValueLabel: { Text("More") }
+          )
+          .accessibilityValue(Text(preferences.activationSensitivity.accessibilityLabel))
+
+          Text("Adjust how far a swipe must move before the picker opens.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
 
         VStack(alignment: .leading, spacing: 8) {
@@ -112,10 +134,25 @@ private struct GesturesSettingsView: View {
     .scenePadding()
   }
 
-  private var pickerTriggerBinding: Binding<PickerTrigger> {
+  private var pickerActivationBinding: Binding<PickerActivation> {
     Binding(
-      get: { preferences.pickerTrigger },
-      set: { preferences.pickerTrigger = $0 })
+      get: { preferences.pickerActivation },
+      set: { preferences.pickerActivation = $0 })
+  }
+
+  private var pickerFingerCountBinding: Binding<PickerFingerCount> {
+    Binding(
+      get: { preferences.pickerFingerCount },
+      set: { preferences.pickerFingerCount = $0 })
+  }
+
+  private var activationSensitivityBinding: Binding<Double> {
+    Binding(
+      get: { Double(preferences.activationSensitivity.rawValue) },
+      set: { value in
+        let index = Int(value.rounded())
+        preferences.activationSensitivity = GestureSensitivity(rawValue: index) ?? .medium
+      })
   }
 
   private var sensitivityBinding: Binding<Double> {

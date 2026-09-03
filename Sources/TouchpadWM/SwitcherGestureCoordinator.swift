@@ -29,7 +29,9 @@ final class SwitcherGestureCoordinator {
     self.haptics = haptics
     self.preferences = preferences
     recognizer = SwitcherGestureRecognizer(
-      trigger: preferences.pickerTrigger,
+      activation: preferences.pickerActivation,
+      fingerCount: preferences.pickerFingerCount,
+      activationSensitivity: preferences.activationSensitivity,
       sensitivity: preferences.sensitivity)
   }
 
@@ -47,7 +49,9 @@ final class SwitcherGestureCoordinator {
 
   private func handle(_ frame: TouchFrame) {
     recognizer.update(
-      trigger: preferences.pickerTrigger,
+      activation: preferences.pickerActivation,
+      fingerCount: preferences.pickerFingerCount,
+      activationSensitivity: preferences.activationSensitivity,
       sensitivity: preferences.sensitivity)
     for command in recognizer.consume(frame) {
       handle(command)
