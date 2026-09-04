@@ -6,8 +6,9 @@ struct SettingsView: View {
   let state: AppState
   let appRules: AppRulesController
   let gesturePreferences: GesturePreferences
+  let startAtLogin: StartAtLoginController
 
-  @State private var selection: SettingsSection? = .accessibility
+  @State private var selection: SettingsSection? = .general
 
   var body: some View {
     NavigationSplitView {
@@ -33,6 +34,9 @@ struct SettingsView: View {
   @ViewBuilder
   private var detailView: some View {
     switch selection {
+    case .general:
+      GeneralSettingsView(
+        startAtLogin: startAtLogin)
     case .accessibility:
       AccessibilitySettingsView(state: state)
     case .gestures:
@@ -46,6 +50,7 @@ struct SettingsView: View {
 }
 
 private enum SettingsSection: String, CaseIterable, Hashable, Identifiable {
+  case general = "General"
   case accessibility = "Accessibility"
   case gestures = "Gestures"
   case apps = "Apps"
@@ -54,6 +59,8 @@ private enum SettingsSection: String, CaseIterable, Hashable, Identifiable {
 
   var systemImage: String {
     switch self {
+    case .general:
+      "gearshape"
     case .accessibility:
       "accessibility"
     case .gestures:
@@ -61,6 +68,37 @@ private enum SettingsSection: String, CaseIterable, Hashable, Identifiable {
     case .apps:
       "square.grid.2x2"
     }
+  }
+}
+
+@MainActor
+private struct GeneralSettingsView: View {
+  let startAtLogin: StartAtLoginController
+
+  var body: some View {
+    Form {
+      Section("Application") {
+        Toggle("Start at login", isOn: startAtLoginBinding)
+
+        if let errorMessage = startAtLogin.errorMessage {
+          Text(errorMessage)
+            .font(.caption)
+            .foregroundStyle(.red)
+        }
+      }
+    }
+    .formStyle(.grouped)
+    .navigationTitle("General")
+    .scenePadding()
+    .onAppear {
+      startAtLogin.refresh()
+    }
+  }
+
+  private var startAtLoginBinding: Binding<Bool> {
+    Binding(
+      get: { startAtLogin.isEnabled },
+      set: { startAtLogin.setEnabled($0) })
   }
 }
 
@@ -179,9 +217,12 @@ private struct AccessibilitySettingsView: View {
     Form {
       Section("Accessibility") {
         LabeledContent("Status") {
-          Text(state.accessibilityPermission == .available ? "Access granted" : "Access required")
+          let presentation = AccessibilityStatusPresentation(
+            permission: state.accessibilityPermission)
+
+          Text(presentation.title)
             .foregroundStyle(
-              state.accessibilityPermission == .available ? .primary : .secondary)
+              presentation.color == .success ? .green : .red)
         }
 
         Text("Touchpad WM needs Accessibility access to list and activate windows.")

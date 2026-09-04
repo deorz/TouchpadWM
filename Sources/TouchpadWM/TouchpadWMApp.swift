@@ -7,6 +7,7 @@ struct TouchpadWMApp: App {
   @State private var state: AppState
   @State private var appRules: AppRulesController
   @State private var gesturePreferences: GesturePreferences
+  @State private var startAtLogin: StartAtLoginController
   @State private var overlay: SwitcherOverlayPanelController
   @State private var switcherCoordinator: SwitcherGestureCoordinator
   @State private var pickerStartup: PickerStartupGate
@@ -18,6 +19,7 @@ struct TouchpadWMApp: App {
     let windowPicker = WindowPickerController(service: AccessibilityWindowService())
     let appRules = AppRulesController(windowPicker: windowPicker)
     let gesturePreferences = GesturePreferences()
+    let startAtLogin = StartAtLoginController()
     let overlay = SwitcherOverlayPanelController()
     let switcherController = SwitcherController(windowSource: windowPicker)
     let switcherCoordinator = SwitcherGestureCoordinator(
@@ -30,6 +32,7 @@ struct TouchpadWMApp: App {
     _state = State(initialValue: appState)
     _appRules = State(initialValue: appRules)
     _gesturePreferences = State(initialValue: gesturePreferences)
+    _startAtLogin = State(initialValue: startAtLogin)
     _overlay = State(initialValue: overlay)
     _switcherCoordinator = State(initialValue: switcherCoordinator)
     _pickerStartup = State(initialValue: pickerStartup)
@@ -63,7 +66,8 @@ struct TouchpadWMApp: App {
       SettingsView(
         state: state,
         appRules: appRules,
-        gesturePreferences: gesturePreferences)
+        gesturePreferences: gesturePreferences,
+        startAtLogin: startAtLogin)
     }
     .defaultSize(width: 880, height: 560)
     .onChange(of: scenePhase) { _, phase in
@@ -78,6 +82,7 @@ struct TouchpadWMApp: App {
       }
     }
   }
+
 }
 
 private struct StatusMenuView: View {
@@ -98,7 +103,7 @@ private struct StatusMenuView: View {
       state.refreshAccessibilityPermission()
     }
     Divider()
-    Button("Settings") {
+    Button("Settings…") {
       NSApp.activate(ignoringOtherApps: true)
       DispatchQueue.main.async {
         openWindow(id: "settings")

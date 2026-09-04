@@ -5,6 +5,20 @@ import XCTest
 
 @MainActor
 final class AccessibilityPermissionTests: XCTestCase {
+  func testAvailablePermissionUsesGreenGrantedStatusPresentation() {
+    let presentation = AccessibilityStatusPresentation(permission: .available)
+
+    XCTAssertEqual(presentation.title, "Access granted")
+    XCTAssertEqual(presentation.color, .success)
+  }
+
+  func testUnavailablePermissionUsesRedRequiredStatusPresentation() {
+    let presentation = AccessibilityStatusPresentation(permission: .unavailable)
+
+    XCTAssertEqual(presentation.title, "Access required")
+    XCTAssertEqual(presentation.color, .error)
+  }
+
   func testRefreshUpdatesPermissionFromSource() {
     let source = PermissionSource(isTrusted: false)
     let state = AppState(permissionChecker: source)
