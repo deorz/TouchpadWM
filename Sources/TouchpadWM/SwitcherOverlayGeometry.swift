@@ -36,4 +36,8 @@ enum SwitcherOverlayGeometry {
       x: screenFrame.midX - panelSize.width / 2,
       y: screenFrame.midY - panelSize.height / 2)
   }
+
+  static func showsScrollIndicator(forWindowCount count: Int, maximumVisibleRows: Int) -> Bool {
+    count > maximumVisibleRows
+  }
 }

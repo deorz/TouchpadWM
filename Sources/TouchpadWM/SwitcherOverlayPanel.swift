@@ -52,7 +52,8 @@ final class SwitcherOverlayPanelController {
     panel.hidesOnDeactivate = false
     panel.isOpaque = false
     panel.backgroundColor = .clear
-    panel.contentView = NSHostingView(rootView: SwitcherOverlayView(model: model))
+    panel.contentView = NSHostingView(
+      rootView: SwitcherOverlayView(model: model, preferences: preferences))
     return panel
   }
 }
@@ -60,6 +61,7 @@ final class SwitcherOverlayPanelController {
 @MainActor
 private struct SwitcherOverlayView: View {
   let model: SwitcherOverlayModel
+  let preferences: GesturePreferences
   @State private var iconCache = ApplicationIconCache()
 
   var body: some View {
@@ -89,7 +91,12 @@ private struct SwitcherOverlayView: View {
                 .id(PickerScrollAnchor.bottomPadding)
             }
           }
-          .scrollIndicators(.hidden)
+          .scrollIndicators(
+            SwitcherOverlayGeometry.showsScrollIndicator(
+              forWindowCount: session.windows.count,
+              maximumVisibleRows: preferences.pickerVisibleRows)
+              ? .visible : .hidden
+          )
           .onAppear {
             scrollToInitialSelection(in: session, using: proxy)
           }

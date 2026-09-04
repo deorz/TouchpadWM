@@ -48,6 +48,20 @@ final class SwitcherOverlayGeometryTests: XCTestCase {
       CGSize(width: 652, height: 200))
   }
 
+  func testScrollIndicatorStaysHiddenWhenAllWindowsFit() {
+    XCTAssertFalse(
+      SwitcherOverlayGeometry.showsScrollIndicator(
+        forWindowCount: 5,
+        maximumVisibleRows: 5))
+  }
+
+  func testScrollIndicatorAppearsWhenWindowsOverflow() {
+    XCTAssertTrue(
+      SwitcherOverlayGeometry.showsScrollIndicator(
+        forWindowCount: 6,
+        maximumVisibleRows: 5))
+  }
+
   func testOriginCentersThePanelWithinTheScreenFrame() {
     let screenFrame = CGRect(x: 0, y: 0, width: 1000, height: 800)
     let panelSize = CGSize(width: 280, height: 200)
