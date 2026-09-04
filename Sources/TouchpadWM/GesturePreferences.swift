@@ -11,15 +11,15 @@ enum GestureSensitivity: Int, CaseIterable, Codable, Equatable {
   var movementMultiplier: Float {
     switch self {
     case .lowest:
-      0.6
+      1.6
     case .low:
-      0.8
+      1.35
     case .medium:
-      1.0
+      1.1
     case .high:
-      1.25
+      0.9
     case .highest:
-      1.5
+      0.7
     }
   }
 

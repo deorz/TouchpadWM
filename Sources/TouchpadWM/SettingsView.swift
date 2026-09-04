@@ -127,8 +127,8 @@ private struct GesturesSettingsView: View {
             in: 0...Double(GestureSensitivity.allCases.count - 1),
             step: 1,
             label: { Text("Activation sensitivity") },
-            minimumValueLabel: { Text("Less") },
-            maximumValueLabel: { Text("More") }
+            minimumValueLabel: { Text(GestureSensitivitySliderLabels.minimumValue) },
+            maximumValueLabel: { Text(GestureSensitivitySliderLabels.maximumValue) }
           )
           .accessibilityValue(Text(preferences.activationSensitivity.accessibilityLabel))
 
@@ -143,8 +143,8 @@ private struct GesturesSettingsView: View {
             in: 0...Double(GestureSensitivity.allCases.count - 1),
             step: 1,
             label: { Text("Sensitivity") },
-            minimumValueLabel: { Text("Less") },
-            maximumValueLabel: { Text("More") }
+            minimumValueLabel: { Text(GestureSensitivitySliderLabels.minimumValue) },
+            maximumValueLabel: { Text(GestureSensitivitySliderLabels.maximumValue) }
           )
           .accessibilityValue(Text(preferences.sensitivity.accessibilityLabel))
 
@@ -207,6 +207,11 @@ private struct GesturesSettingsView: View {
       get: { preferences.hapticStrength },
       set: { preferences.hapticStrength = $0 })
   }
+}
+
+enum GestureSensitivitySliderLabels {
+  static let minimumValue = "Less"
+  static let maximumValue = "More"
 }
 
 @MainActor
