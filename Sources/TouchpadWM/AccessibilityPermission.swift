@@ -8,6 +8,27 @@ enum AccessibilityPermissionState: Equatable {
   case unavailable
 }
 
+enum AccessibilityStatusColor: Equatable {
+  case success
+  case error
+}
+
+struct AccessibilityStatusPresentation: Equatable {
+  let title: String
+  let color: AccessibilityStatusColor
+
+  init(permission: AccessibilityPermissionState) {
+    switch permission {
+    case .available:
+      title = "Access granted"
+      color = .success
+    case .unavailable:
+      title = "Access required"
+      color = .error
+    }
+  }
+}
+
 @MainActor
 final class PickerStartupGate {
   private var hasStarted = false
