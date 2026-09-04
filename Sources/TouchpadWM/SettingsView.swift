@@ -84,6 +84,26 @@ private struct GesturesSettingsView: View {
         }
 
         VStack(alignment: .leading, spacing: 8) {
+          LabeledContent("Picker width") {
+            Text("\(Int(preferences.pickerWidth)) pt")
+              .monospacedDigit()
+          }
+
+          Slider(
+            value: pickerWidthBinding,
+            in: GesturePreferences.pickerWidthRange,
+            step: GesturePreferences.pickerWidthStep
+          )
+          .accessibilityLabel("Picker width")
+          .accessibilityValue("\(Int(preferences.pickerWidth)) points")
+        }
+
+        Stepper(
+          "Visible rows: \(preferences.pickerVisibleRows)",
+          value: pickerVisibleRowsBinding,
+          in: GesturePreferences.pickerVisibleRowsRange)
+
+        VStack(alignment: .leading, spacing: 8) {
           Slider(
             value: activationSensitivityBinding,
             in: 0...Double(GestureSensitivity.allCases.count - 1),
@@ -153,6 +173,18 @@ private struct GesturesSettingsView: View {
         let index = Int(value.rounded())
         preferences.activationSensitivity = GestureSensitivity(rawValue: index) ?? .medium
       })
+  }
+
+  private var pickerWidthBinding: Binding<Double> {
+    Binding(
+      get: { preferences.pickerWidth },
+      set: { preferences.pickerWidth = $0 })
+  }
+
+  private var pickerVisibleRowsBinding: Binding<Int> {
+    Binding(
+      get: { preferences.pickerVisibleRows },
+      set: { preferences.pickerVisibleRows = $0 })
   }
 
   private var sensitivityBinding: Binding<Double> {

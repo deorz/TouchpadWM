@@ -29,6 +29,25 @@ final class SwitcherOverlayGeometryTests: XCTestCase {
       CGSize(width: 360, height: 320))
   }
 
+  func testPanelSizeUsesTheConfiguredWidthAndVisibleRowLimit() {
+    XCTAssertEqual(
+      SwitcherOverlayGeometry.panelSize(
+        forWindowCount: 9,
+        width: 800,
+        maximumVisibleRows: 7),
+      CGSize(width: 800, height: 440))
+  }
+
+  func testPanelWidthFitsInsideTheVisibleScreenWithMargins() {
+    XCTAssertEqual(
+      SwitcherOverlayGeometry.panelSize(
+        forWindowCount: 3,
+        width: 800,
+        maximumVisibleRows: 5,
+        fittingIn: CGRect(x: 0, y: 0, width: 700, height: 900)),
+      CGSize(width: 652, height: 200))
+  }
+
   func testOriginCentersThePanelWithinTheScreenFrame() {
     let screenFrame = CGRect(x: 0, y: 0, width: 1000, height: 800)
     let panelSize = CGSize(width: 280, height: 200)

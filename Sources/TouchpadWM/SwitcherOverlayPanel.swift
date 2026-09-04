@@ -7,17 +7,27 @@ import SwiftUI
 @MainActor
 final class SwitcherOverlayPanelController {
   private let model = SwitcherOverlayModel()
+  private let preferences: GesturePreferences
   private var panel: NSPanel?
+
+  init(preferences: GesturePreferences = GesturePreferences()) {
+    self.preferences = preferences
+  }
 
   func show(_ session: SwitcherSession) {
     let panel = panel ?? makePanel()
     self.panel = panel
-    let panelSize = SwitcherOverlayGeometry.panelSize(forWindowCount: session.windows.count)
+    let screen = NSScreen.main
+    let panelSize = SwitcherOverlayGeometry.panelSize(
+      forWindowCount: session.windows.count,
+      width: preferences.pickerWidth,
+      maximumVisibleRows: preferences.pickerVisibleRows,
+      fittingIn: screen?.visibleFrame)
     panel.setContentSize(panelSize)
     model.show(session)
-    if let screen = NSScreen.main {
+    if let screen {
       let origin = SwitcherOverlayGeometry.origin(
-        forPanelSize: panelSize, centeredIn: screen.frame)
+        forPanelSize: panelSize, centeredIn: screen.visibleFrame)
       panel.setFrameOrigin(origin)
     }
     panel.orderFrontRegardless()
@@ -38,7 +48,7 @@ final class SwitcherOverlayPanelController {
       defer: false)
     panel.level = .floating
     panel.isFloatingPanel = true
-    panel.hasShadow = false
+    panel.hasShadow = true
     panel.hidesOnDeactivate = false
     panel.isOpaque = false
     panel.backgroundColor = .clear
@@ -100,8 +110,7 @@ private struct SwitcherOverlayView: View {
         Color.clear
       }
     }
-    .background(.regularMaterial)
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .modifier(PickerSurface())
   }
 
   private func scrollToInitialSelection(in session: SwitcherSession, using proxy: ScrollViewProxy) {
@@ -109,6 +118,20 @@ private struct SwitcherOverlayView: View {
       proxy.scrollTo(PickerScrollAnchor.bottomPadding, anchor: .bottom)
     } else {
       proxy.scrollTo(session.selectedIndex, anchor: .center)
+    }
+  }
+}
+
+private struct PickerSurface: ViewModifier {
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if #available(macOS 26.0, *) {
+      content
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    } else {
+      content
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
   }
 }

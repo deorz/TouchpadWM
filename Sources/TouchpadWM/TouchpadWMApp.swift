@@ -18,7 +18,7 @@ struct TouchpadWMApp: App {
     let windowPicker = WindowPickerController(service: AccessibilityWindowService())
     let appRules = AppRulesController(windowPicker: windowPicker)
     let gesturePreferences = GesturePreferences()
-    let overlay = SwitcherOverlayPanelController()
+    let overlay = SwitcherOverlayPanelController(preferences: gesturePreferences)
     let switcherController = SwitcherController(windowSource: windowPicker)
     let switcherCoordinator = SwitcherGestureCoordinator(
       switcherController: switcherController,
