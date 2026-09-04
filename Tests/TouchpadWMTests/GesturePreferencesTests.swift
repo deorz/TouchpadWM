@@ -32,10 +32,10 @@ final class GesturePreferencesTests: XCTestCase {
     XCTAssertEqual(second.activationSensitivity, .highest)
   }
 
-  func testSensitivityPointsMapToIncreasingMovementMultipliers() {
+  func testSensitivityPointsMapToDecreasingMovementRequirements() {
     XCTAssertEqual(
       GestureSensitivity.allCases.map(\.movementMultiplier),
-      [0.6, 0.8, 1.0, 1.25, 1.5])
+      [1.6, 1.35, 1.1, 0.9, 0.7])
   }
 
   func testGestureOptionsExposeAccessibleLabelsWithoutNumericSensitivityValues() {
@@ -49,6 +49,11 @@ final class GesturePreferencesTests: XCTestCase {
     XCTAssertEqual(
       PickerFingerCount.allCases.map(\.label),
       ["3 fingers", "4 fingers", "5 fingers"])
+  }
+
+  func testSensitivitySliderEndpointsDescribeRequiredMovement() {
+    XCTAssertEqual(GestureSensitivitySliderLabels.minimumValue, "Less")
+    XCTAssertEqual(GestureSensitivitySliderLabels.maximumValue, "More")
   }
 
   func testInvalidStoredValuesFallBackToSafeDefaults() {

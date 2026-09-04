@@ -33,21 +33,22 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
     XCTAssertEqual(recognizer.consume(frame(count: 4, y: 0.5)), [.openSwitcher])
   }
 
-  func testLowerSensitivityRequiresMoreMovementForOneSelectionChange() {
+  func testLowerSensitivityReachesSelectionWithLessMovement() {
     var recognizer = SwitcherGestureRecognizer(sensitivity: .lowest)
     _ = recognizer.consume(frame(y: 0.5))
 
     XCTAssertEqual(
-      recognizer.consume(frame(y: 0.5 + SwitcherGestureRecognizer.rowDistance)), [])
+      recognizer.consume(frame(y: 0.5 + 0.052)),
+      [.moveSwitcherSelection(.previous)])
   }
 
-  func testHigherSensitivityChangesSelectionWithTheSameMovement() {
+  func testHigherSensitivityRequiresMoreMovementForOneSelectionChange() {
     var recognizer = SwitcherGestureRecognizer(sensitivity: .highest)
     _ = recognizer.consume(frame(y: 0.5))
 
     XCTAssertEqual(
       recognizer.consume(frame(y: 0.5 + SwitcherGestureRecognizer.rowDistance)),
-      [.moveSwitcherSelection(.previous)])
+      [])
   }
 
   func testUpdatingConfigurationAppliesToTheNextGesture() {
@@ -206,19 +207,19 @@ final class SwitcherGestureRecognizerTests: XCTestCase {
     XCTAssertEqual(recognizer.consume(frame(ids: [1, 2], y: 0.5)), [])
   }
 
-  func testHigherActivationSensitivityOpensWithMovementThatDoesNotOpenAtLowerSensitivity() {
-    var highSensitivity = SwitcherGestureRecognizer(
-      activation: .swipeUp,
-      activationSensitivity: .highest)
+  func testLowerActivationSensitivityOpensWithMovementThatDoesNotOpenAtHigherSensitivity() {
     var lowSensitivity = SwitcherGestureRecognizer(
       activation: .swipeUp,
       activationSensitivity: .lowest)
+    var highSensitivity = SwitcherGestureRecognizer(
+      activation: .swipeUp,
+      activationSensitivity: .highest)
 
     _ = highSensitivity.consume(frame(y: 0.5))
     _ = lowSensitivity.consume(frame(y: 0.5))
 
-    XCTAssertEqual(highSensitivity.consume(frame(y: 0.608)), [.openSwitcher])
-    XCTAssertEqual(lowSensitivity.consume(frame(y: 0.608)), [])
+    XCTAssertEqual(lowSensitivity.consume(frame(y: 0.58)), [.openSwitcher])
+    XCTAssertEqual(highSensitivity.consume(frame(y: 0.58)), [])
   }
 
   func testUntriggeredSwipeDoesNotActivateThePickerWhenFingersLift() {
