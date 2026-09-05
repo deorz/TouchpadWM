@@ -92,12 +92,21 @@ enum PickerFingerCount: Int, CaseIterable, Codable, Equatable {
 
 @Observable
 final class GesturePreferences {
+  static let pickerWidthRange = 360.0...800.0
+  static let pickerWidthStep = 40.0
+  static let pickerVisibleRowsRange = 3...10
+
+  private static let defaultPickerWidth = 360.0
+  private static let defaultPickerVisibleRows = 5
+
   private enum Key {
     static let sensitivity = "gestureSensitivity"
     static let hapticStrength = "gestureHapticStrength"
     static let pickerActivation = "pickerActivation"
     static let pickerFingerCount = "pickerTrigger"
     static let activationSensitivity = "activationSensitivity"
+    static let pickerWidth = "pickerWidth"
+    static let pickerVisibleRows = "pickerVisibleRows"
   }
 
   private let defaults: UserDefaults
@@ -108,6 +117,8 @@ final class GesturePreferences {
     pickerActivation = Self.pickerActivation(from: defaults)
     pickerFingerCount = Self.pickerFingerCount(from: defaults)
     activationSensitivity = Self.activationSensitivity(from: defaults)
+    pickerWidth = Self.pickerWidth(from: defaults)
+    pickerVisibleRows = Self.pickerVisibleRows(from: defaults)
   }
 
   var sensitivity: GestureSensitivity {
@@ -137,6 +148,28 @@ final class GesturePreferences {
   var activationSensitivity: GestureSensitivity {
     didSet {
       defaults.set(activationSensitivity.rawValue, forKey: Key.activationSensitivity)
+    }
+  }
+
+  var pickerWidth: Double {
+    didSet {
+      let validatedValue = Self.validatedPickerWidth(pickerWidth)
+      if pickerWidth != validatedValue {
+        pickerWidth = validatedValue
+      } else {
+        defaults.set(pickerWidth, forKey: Key.pickerWidth)
+      }
+    }
+  }
+
+  var pickerVisibleRows: Int {
+    didSet {
+      let validatedValue = Self.validatedPickerVisibleRows(pickerVisibleRows)
+      if pickerVisibleRows != validatedValue {
+        pickerVisibleRows = validatedValue
+      } else {
+        defaults.set(pickerVisibleRows, forKey: Key.pickerVisibleRows)
+      }
     }
   }
 
@@ -183,5 +216,31 @@ final class GesturePreferences {
       return .medium
     }
     return value
+  }
+
+  private static func pickerWidth(from defaults: UserDefaults) -> Double {
+    guard let value = defaults.object(forKey: Key.pickerWidth) as? Double else {
+      return defaultPickerWidth
+    }
+    return validatedPickerWidth(value)
+  }
+
+  private static func pickerVisibleRows(from defaults: UserDefaults) -> Int {
+    guard let value = defaults.object(forKey: Key.pickerVisibleRows) as? Int else {
+      return defaultPickerVisibleRows
+    }
+    return validatedPickerVisibleRows(value)
+  }
+
+  private static func validatedPickerWidth(_ value: Double) -> Double {
+    let stepCount = (value - pickerWidthRange.lowerBound) / pickerWidthStep
+    guard pickerWidthRange.contains(value), stepCount == stepCount.rounded() else {
+      return defaultPickerWidth
+    }
+    return value
+  }
+
+  private static func validatedPickerVisibleRows(_ value: Int) -> Int {
+    pickerVisibleRowsRange.contains(value) ? value : defaultPickerVisibleRows
   }
 }

@@ -12,6 +12,8 @@ final class GesturePreferencesTests: XCTestCase {
     XCTAssertEqual(preferences.pickerActivation, .touch)
     XCTAssertEqual(preferences.pickerFingerCount, .three)
     XCTAssertEqual(preferences.activationSensitivity, .medium)
+    XCTAssertEqual(preferences.pickerWidth, 360)
+    XCTAssertEqual(preferences.pickerVisibleRows, 5)
   }
 
   func testPreferencesPersistAcrossStoreInstances() {
@@ -22,6 +24,8 @@ final class GesturePreferencesTests: XCTestCase {
     first.pickerActivation = .swipeDown
     first.pickerFingerCount = .five
     first.activationSensitivity = .highest
+    first.pickerWidth = 800
+    first.pickerVisibleRows = 10
 
     let second = GesturePreferences(defaults: defaults)
 
@@ -30,6 +34,8 @@ final class GesturePreferencesTests: XCTestCase {
     XCTAssertEqual(second.pickerActivation, .swipeDown)
     XCTAssertEqual(second.pickerFingerCount, .five)
     XCTAssertEqual(second.activationSensitivity, .highest)
+    XCTAssertEqual(second.pickerWidth, 800)
+    XCTAssertEqual(second.pickerVisibleRows, 10)
   }
 
   func testSensitivityPointsMapToDecreasingMovementRequirements() {
@@ -63,6 +69,8 @@ final class GesturePreferencesTests: XCTestCase {
     defaults.set("invalid", forKey: "pickerActivation")
     defaults.set(2, forKey: "pickerTrigger")
     defaults.set(99, forKey: "activationSensitivity")
+    defaults.set(361, forKey: "pickerWidth")
+    defaults.set(20, forKey: "pickerVisibleRows")
 
     let preferences = GesturePreferences(defaults: defaults)
 
@@ -71,6 +79,18 @@ final class GesturePreferencesTests: XCTestCase {
     XCTAssertEqual(preferences.pickerActivation, .touch)
     XCTAssertEqual(preferences.pickerFingerCount, .three)
     XCTAssertEqual(preferences.activationSensitivity, .medium)
+    XCTAssertEqual(preferences.pickerWidth, 360)
+    XCTAssertEqual(preferences.pickerVisibleRows, 5)
+  }
+
+  func testUnsupportedPickerLayoutAssignmentsFallBackToSafeDefaults() {
+    let preferences = GesturePreferences(defaults: makeDefaults())
+
+    preferences.pickerWidth = 840
+    preferences.pickerVisibleRows = 11
+
+    XCTAssertEqual(preferences.pickerWidth, 360)
+    XCTAssertEqual(preferences.pickerVisibleRows, 5)
   }
 
   func testChangingPreferenceProducesAnObservationUpdate() {

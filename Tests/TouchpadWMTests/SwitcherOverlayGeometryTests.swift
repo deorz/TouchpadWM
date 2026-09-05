@@ -11,6 +11,10 @@ final class SwitcherOverlayGeometryTests: XCTestCase {
       SwitcherOverlayGeometry.verticalContentPadding * 2)
   }
 
+  func testScrollIndicatorStaysInsideThePanelContentPadding() {
+    XCTAssertEqual(SwitcherOverlayGeometry.scrollIndicatorVerticalInset, 12)
+  }
+
   func testPanelSizeUsesOneCompactRowForASingleWindow() {
     XCTAssertEqual(
       SwitcherOverlayGeometry.panelSize(forWindowCount: 1),
@@ -27,6 +31,39 @@ final class SwitcherOverlayGeometryTests: XCTestCase {
     XCTAssertEqual(
       SwitcherOverlayGeometry.panelSize(forWindowCount: 9),
       CGSize(width: 360, height: 320))
+  }
+
+  func testPanelSizeUsesTheConfiguredWidthAndVisibleRowLimit() {
+    XCTAssertEqual(
+      SwitcherOverlayGeometry.panelSize(
+        forWindowCount: 9,
+        width: 800,
+        maximumVisibleRows: 7),
+      CGSize(width: 800, height: 440))
+  }
+
+  func testPanelWidthFitsInsideTheVisibleScreenWithMargins() {
+    XCTAssertEqual(
+      SwitcherOverlayGeometry.panelSize(
+        forWindowCount: 3,
+        width: 800,
+        maximumVisibleRows: 5,
+        fittingIn: CGRect(x: 0, y: 0, width: 700, height: 900)),
+      CGSize(width: 652, height: 200))
+  }
+
+  func testScrollIndicatorStaysHiddenWhenAllWindowsFit() {
+    XCTAssertFalse(
+      SwitcherOverlayGeometry.showsScrollIndicator(
+        forWindowCount: 5,
+        maximumVisibleRows: 5))
+  }
+
+  func testScrollIndicatorAppearsWhenWindowsOverflow() {
+    XCTAssertTrue(
+      SwitcherOverlayGeometry.showsScrollIndicator(
+        forWindowCount: 6,
+        maximumVisibleRows: 5))
   }
 
   func testOriginCentersThePanelWithinTheScreenFrame() {

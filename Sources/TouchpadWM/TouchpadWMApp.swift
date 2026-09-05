@@ -20,7 +20,7 @@ struct TouchpadWMApp: App {
     let appRules = AppRulesController(windowPicker: windowPicker)
     let gesturePreferences = GesturePreferences()
     let startAtLogin = StartAtLoginController()
-    let overlay = SwitcherOverlayPanelController()
+    let overlay = SwitcherOverlayPanelController(preferences: gesturePreferences)
     let switcherController = SwitcherController(windowSource: windowPicker)
     let switcherCoordinator = SwitcherGestureCoordinator(
       switcherController: switcherController,
