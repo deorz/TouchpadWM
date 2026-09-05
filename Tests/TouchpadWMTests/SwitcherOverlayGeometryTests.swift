@@ -11,6 +11,10 @@ final class SwitcherOverlayGeometryTests: XCTestCase {
       SwitcherOverlayGeometry.verticalContentPadding * 2)
   }
 
+  func testScrollIndicatorStaysInsideThePanelContentPadding() {
+    XCTAssertEqual(SwitcherOverlayGeometry.scrollIndicatorVerticalInset, 12)
+  }
+
   func testPanelSizeUsesOneCompactRowForASingleWindow() {
     XCTAssertEqual(
       SwitcherOverlayGeometry.panelSize(forWindowCount: 1),

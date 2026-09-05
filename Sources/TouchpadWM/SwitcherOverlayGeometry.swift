@@ -5,6 +5,7 @@ enum SwitcherOverlayGeometry {
   static let rowHeight: CGFloat = 56
   static let rowSpacing: CGFloat = 4
   static let verticalContentPadding: CGFloat = 12
+  static let scrollIndicatorVerticalInset: CGFloat = 12
   static let verticalChrome = verticalContentPadding * 2
   static let maximumVisibleRows = 5
   static let horizontalScreenMargin: CGFloat = 24

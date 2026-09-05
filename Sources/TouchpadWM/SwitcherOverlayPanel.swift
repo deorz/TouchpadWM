@@ -97,6 +97,11 @@ private struct SwitcherOverlayView: View {
               maximumVisibleRows: preferences.pickerVisibleRows)
               ? .visible : .hidden
           )
+          .contentMargins(
+            .vertical,
+            SwitcherOverlayGeometry.scrollIndicatorVerticalInset,
+            for: .scrollIndicators
+          )
           .onAppear {
             scrollToInitialSelection(in: session, using: proxy)
           }
