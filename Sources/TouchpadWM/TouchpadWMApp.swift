@@ -60,7 +60,7 @@ struct TouchpadWMApp: App {
 
   var body: some Scene {
     MenuBarExtra(isInserted: menuBarIconBinding) {
-      StatusMenuView(state: state)
+      StatusMenuView()
     } label: {
       Image(nsImage: Self.menuBarIcon)
     }
@@ -152,21 +152,7 @@ final class TouchpadWMAppDelegate: NSObject, NSApplicationDelegate {
 private struct StatusMenuView: View {
   @Environment(\.openWindow) private var openWindow
 
-  let state: AppState
-
   var body: some View {
-    Text(
-      state.accessibilityPermission == .available
-        ? "Accessibility access granted" : "Accessibility access required")
-    if state.accessibilityPermission == .unavailable {
-      Button("Open Accessibility Settings") {
-        state.openAccessibilitySettings()
-      }
-    }
-    Button("Refresh Accessibility Status") {
-      state.refreshAccessibilityPermission()
-    }
-    Divider()
     Button("Settings…") {
       NSApp.activate(ignoringOtherApps: true)
       DispatchQueue.main.async {
