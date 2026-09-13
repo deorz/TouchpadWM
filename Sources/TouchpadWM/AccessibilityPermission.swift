@@ -80,16 +80,21 @@ final class AppState {
   private let permissionChecker: any AccessibilityPermissionChecking
   private let refreshInterval: TimeInterval
   private var permissionRefreshTimer: Timer?
+  private var hasRequestedTrust = false
 
   init(
     permissionChecker: any AccessibilityPermissionChecking = AccessibilityPermissionService(),
-    refreshInterval: TimeInterval = 2
+    refreshInterval: TimeInterval = 2,
+    requestTrustOnInit: Bool = true
   ) {
     self.permissionChecker = permissionChecker
     self.refreshInterval = refreshInterval
     accessibilityPermission = permissionChecker.isTrusted() ? .available : .unavailable
     if accessibilityPermission == .unavailable {
-      permissionChecker.requestTrust()
+      if requestTrustOnInit {
+        hasRequestedTrust = true
+        permissionChecker.requestTrust()
+      }
       startPolling()
     }
   }
@@ -104,6 +109,15 @@ final class AppState {
       permissionRefreshTimer?.invalidate()
       permissionRefreshTimer = nil
     }
+  }
+
+  func requestAccessibilityPermissionIfNeeded() {
+    refreshAccessibilityPermission()
+    guard accessibilityPermission == .unavailable, !hasRequestedTrust else {
+      return
+    }
+    hasRequestedTrust = true
+    permissionChecker.requestTrust()
   }
 
   func openAccessibilitySettings() {
