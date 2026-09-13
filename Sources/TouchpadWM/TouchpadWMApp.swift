@@ -4,7 +4,9 @@ import SwiftUI
 @main
 struct TouchpadWMApp: App {
   @Environment(\.scenePhase) private var scenePhase
+  @NSApplicationDelegateAdaptor(TouchpadWMAppDelegate.self) private var appDelegate
   @State private var state: AppState
+  @State private var applicationPreferences: ApplicationPreferences
   @State private var appRules: AppRulesController
   @State private var gesturePreferences: GesturePreferences
   @State private var startAtLogin: StartAtLoginController
@@ -14,7 +16,6 @@ struct TouchpadWMApp: App {
 
   init() {
     NSApplication.shared.setActivationPolicy(.accessory)
-    NSApp.activate(ignoringOtherApps: true)
 
     let windowPicker = WindowPickerController(service: AccessibilityWindowService())
     let appRules = AppRulesController(windowPicker: windowPicker)
@@ -26,10 +27,11 @@ struct TouchpadWMApp: App {
       switcherController: switcherController,
       overlay: overlay,
       preferences: gesturePreferences)
-    let appState = AppState()
+    let appState = AppState(requestTrustOnInit: false)
     let pickerStartup = PickerStartupGate()
 
     _state = State(initialValue: appState)
+    _applicationPreferences = State(initialValue: ApplicationPreferences())
     _appRules = State(initialValue: appRules)
     _gesturePreferences = State(initialValue: gesturePreferences)
     _startAtLogin = State(initialValue: startAtLogin)
@@ -57,19 +59,19 @@ struct TouchpadWMApp: App {
   }()
 
   var body: some Scene {
-    MenuBarExtra {
+    MenuBarExtra(isInserted: menuBarIconBinding) {
       StatusMenuView(state: state)
     } label: {
       Image(nsImage: Self.menuBarIcon)
     }
-    Window("Settings", id: "settings") {
+    SettingsScene(lifecycle: appDelegate.lifecycle) {
       SettingsView(
         state: state,
         appRules: appRules,
         gesturePreferences: gesturePreferences,
-        startAtLogin: startAtLogin)
+        startAtLogin: startAtLogin,
+        applicationPreferences: applicationPreferences)
     }
-    .defaultSize(width: 880, height: 560)
     .onChange(of: scenePhase) { _, phase in
       guard phase == .active else {
         return
@@ -83,6 +85,68 @@ struct TouchpadWMApp: App {
     }
   }
 
+  private var menuBarIconBinding: Binding<Bool> {
+    Binding(
+      get: { applicationPreferences.showMenuBarIcon },
+      set: { applicationPreferences.showMenuBarIcon = $0 })
+  }
+}
+
+/// Keep a window scene even with no menu extra, so hiding the icon never turns this
+/// into a menu-extra-only app that SwiftUI can terminate when its last extra is removed.
+private struct SettingsScene<Content: View>: Scene {
+  @Environment(\.openWindow) private var openWindow
+  // Explicitly observe requests here: the delegate adaptor alone does not invalidate a scene.
+  @ObservedObject var lifecycle: ApplicationLifecycle
+  @ViewBuilder var content: () -> Content
+
+  var body: some Scene {
+    Window("Settings", id: "settings", content: content)
+      .defaultSize(width: 880, height: 560)
+      .defaultLaunchBehavior(.suppressed)
+      .restorationBehavior(.disabled)
+      .onChange(of: lifecycle.settingsRequestID, initial: true) { _, requestID in
+        guard requestID > 0 else { return }
+        openWindow(id: "settings")
+        NSApp.activate(ignoringOtherApps: true)
+      }
+  }
+}
+
+@MainActor
+final class TouchpadWMAppDelegate: NSObject, NSApplicationDelegate {
+  let lifecycle = ApplicationLifecycle()
+
+  func applicationWillFinishLaunching(_ notification: Notification) {
+    // Inspect the actual open event rather than currentAppleEvent in a later callback,
+    // where the login-item parameter may no longer be available.
+    NSAppleEventManager.shared().setEventHandler(
+      self,
+      andSelector: #selector(handleOpenApplication(_:withReplyEvent:)),
+      forEventClass: AEEventClass(kCoreEventClass),
+      andEventID: AEEventID(kAEOpenApplication))
+  }
+
+  @objc func handleOpenApplication(
+    _ event: NSAppleEventDescriptor,
+    withReplyEvent reply: NSAppleEventDescriptor
+  ) {
+    lifecycle.handleOpenApplication(
+      launchProperty: event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue)
+  }
+
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    lifecycle.didFinishLaunching()
+  }
+
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+    lifecycle.handleReopen()
+    return false
+  }
+
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    false
+  }
 }
 
 private struct StatusMenuView: View {

@@ -7,6 +7,7 @@ struct SettingsView: View {
   let appRules: AppRulesController
   let gesturePreferences: GesturePreferences
   let startAtLogin: StartAtLoginController
+  let applicationPreferences: ApplicationPreferences
 
   @State private var selection: SettingsSection? = .general
 
@@ -27,6 +28,7 @@ struct SettingsView: View {
     .navigationSplitViewStyle(.balanced)
     .frame(minWidth: 760, minHeight: 520)
     .onAppear {
+      state.requestAccessibilityPermissionIfNeeded()
       appRules.refresh()
     }
   }
@@ -36,7 +38,8 @@ struct SettingsView: View {
     switch selection {
     case .general:
       GeneralSettingsView(
-        startAtLogin: startAtLogin)
+        startAtLogin: startAtLogin,
+        preferences: applicationPreferences)
     case .accessibility:
       AccessibilitySettingsView(state: state)
     case .gestures:
@@ -74,16 +77,27 @@ private enum SettingsSection: String, CaseIterable, Hashable, Identifiable {
 @MainActor
 private struct GeneralSettingsView: View {
   let startAtLogin: StartAtLoginController
+  @Bindable var preferences: ApplicationPreferences
 
   var body: some View {
     Form {
       Section("Application") {
+        Toggle("Show menu bar icon", isOn: $preferences.showMenuBarIcon)
+
+        Text("To reopen Settings, open Touchpad WM from Spotlight or Finder.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
         Toggle("Start at login", isOn: startAtLoginBinding)
 
         if let errorMessage = startAtLogin.errorMessage {
           Text(errorMessage)
             .font(.caption)
             .foregroundStyle(.red)
+        }
+
+        Button("Quit Touchpad WM") {
+          NSApplication.shared.terminate(nil)
         }
       }
     }
